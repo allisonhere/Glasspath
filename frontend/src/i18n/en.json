@@ -133,6 +133,7 @@
     "newFileMessage": "Name your new file.",
     "numberDirs": "Number of directories",
     "numberFiles": "Number of files",
+    "permissions": "Permissions",
     "rename": "Rename",
     "renameMessage": "Insert a new name for",
     "replace": "Replace",
@@ -234,6 +235,8 @@
       "default": "System default",
       "dark": "Dark",
       "light": "Light",
+      "dawn": "Aurora (Dawn)",
+      "noir": "Noir Neon",
       "title": "Theme"
     },
     "user": "User",

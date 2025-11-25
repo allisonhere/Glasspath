@@ -1,100 +1,83 @@
 <template>
-  <div class="card floating">
-    <div class="card-title">
-      <h2>{{ $t("prompts.fileInfo") }}</h2>
+  <div class="card floating info-panel">
+    <div class="info-panel__header">
+      <div>
+        <p class="info-panel__eyebrow">
+          {{ dir ? $t("prompts.folder") : $t("prompts.file") }}
+        </p>
+        <h2>{{ $t("prompts.fileInfo") }}</h2>
+      </div>
+      <div class="info-panel__pill" v-if="selected.length">
+        <i class="material-icons">layers</i>
+        <span>{{ $t("prompts.filesSelected", { count: selected.length }) }}</span>
+      </div>
     </div>
 
-    <div class="card-content">
-      <p v-if="selected.length > 1">
-        {{ $t("prompts.filesSelected", { count: selected.length }) }}
-      </p>
-
-      <p class="break-word" v-if="selected.length < 2">
-        <strong>{{ $t("prompts.displayName") }}</strong> {{ name }}
-      </p>
-
-      <p v-if="!dir || selected.length > 1">
-        <strong>{{ $t("prompts.size") }}:</strong>
-        <span id="content_length"></span> {{ humanSize }}
-      </p>
-
-      <div v-if="resolution">
-        <strong>{{ $t("prompts.resolution") }}:</strong>
-        {{ resolution.width }} x {{ resolution.height }}
+    <div class="info-panel__body">
+      <div class="info-panel__row">
+        <div class="info-panel__item" v-if="selected.length < 2">
+          <span class="info-panel__label">{{ $t("prompts.displayName") }}</span>
+          <span class="info-panel__value break-word">{{ name }}</span>
+        </div>
+        <div class="info-panel__item">
+          <span class="info-panel__label">{{ $t("prompts.size") }}</span>
+          <span class="info-panel__value">{{ humanSize }}</span>
+        </div>
+        <div class="info-panel__item" v-if="permValue">
+          <span class="info-panel__label">{{ $t("prompts.permissions") }}</span>
+          <span class="info-panel__value">{{ permValue }}</span>
+        </div>
+        <div class="info-panel__item" v-if="selected.length < 2">
+          <span class="info-panel__label">{{ $t("prompts.lastModified") }}</span>
+          <span class="info-panel__value" :title="modTime">{{ humanTime }}</span>
+        </div>
+        <div class="info-panel__item" v-if="resolution">
+          <span class="info-panel__label">{{ $t("prompts.resolution") }}</span>
+          <span class="info-panel__value"
+            >{{ resolution.width }} × {{ resolution.height }}</span
+          >
+        </div>
+        <div class="info-panel__item" v-if="dir && selected.length === 0">
+          <span class="info-panel__label">{{ $t("prompts.numberFiles") }}</span>
+          <span class="info-panel__value">{{ req.numFiles }}</span>
+        </div>
+        <div class="info-panel__item" v-if="dir && selected.length === 0">
+          <span class="info-panel__label">{{ $t("prompts.numberDirs") }}</span>
+          <span class="info-panel__value">{{ req.numDirs }}</span>
+        </div>
       </div>
 
-      <p v-if="selected.length < 2" :title="modTime">
-        <strong>{{ $t("prompts.lastModified") }}:</strong> {{ humanTime }}
-      </p>
-
-      <template v-if="dir && selected.length === 0">
-        <p>
-          <strong>{{ $t("prompts.numberFiles") }}:</strong> {{ req.numFiles }}
-        </p>
-        <p>
-          <strong>{{ $t("prompts.numberDirs") }}:</strong> {{ req.numDirs }}
-        </p>
-      </template>
-
-      <template v-if="!dir">
-        <p>
-          <strong>MD5: </strong
-          ><code
-            ><a
-              @click="checksum($event, 'md5')"
-              @keypress.enter="checksum($event, 'md5')"
-              tabindex="2"
-              >{{ $t("prompts.show") }}</a
-            ></code
+      <div class="info-panel__checks" v-if="!dir">
+        <p class="info-panel__label">{{ $t("prompts.checksums") }}</p>
+        <div class="info-panel__chips">
+          <n-button
+            v-for="algo in hashes"
+            :key="algo"
+            size="small"
+            quaternary
+            @click="checksum($event, algo)"
+            @keypress.enter="checksum($event, algo)"
+            tabindex="0"
           >
-        </p>
-        <p>
-          <strong>SHA1: </strong
-          ><code
-            ><a
-              @click="checksum($event, 'sha1')"
-              @keypress.enter="checksum($event, 'sha1')"
-              tabindex="3"
-              >{{ $t("prompts.show") }}</a
-            ></code
-          >
-        </p>
-        <p>
-          <strong>SHA256: </strong
-          ><code
-            ><a
-              @click="checksum($event, 'sha256')"
-              @keypress.enter="checksum($event, 'sha256')"
-              tabindex="4"
-              >{{ $t("prompts.show") }}</a
-            ></code
-          >
-        </p>
-        <p>
-          <strong>SHA512: </strong
-          ><code
-            ><a
-              @click="checksum($event, 'sha512')"
-              @keypress.enter="checksum($event, 'sha512')"
-              tabindex="5"
-              >{{ $t("prompts.show") }}</a
-            ></code
-          >
-        </p>
-      </template>
+            <span class="info-panel__chip-label">{{ algo.toUpperCase() }}</span>
+            <span class="info-panel__chip-value">{{ $t("prompts.show") }}</span>
+          </n-button>
+        </div>
+      </div>
     </div>
 
-    <div class="card-action">
-      <button
+    <div class="info-panel__footer card-action">
+      <n-button
         id="focus-prompt"
-        type="submit"
+        type="primary"
+        block
+        strong
         @click="closeHovers"
-        class="button button--flat"
         :aria-label="$t('buttons.ok')"
         :title="$t('buttons.ok')"
       >
         {{ $t("buttons.ok") }}
-      </button>
+      </n-button>
     </div>
   </div>
 </template>
@@ -170,9 +153,30 @@ export default {
       }
       return null;
     },
+    permValue: function () {
+      const mode = this.selectedCount
+        ? this.req.items[this.selected[0]].mode
+        : this.req.mode;
+      if (mode === undefined || mode === null) return "";
+      return `${this.formatPerm(mode)} (${this.formatOctal(mode)})`;
+    },
+    hashes() {
+      return ["md5", "sha1", "sha256", "sha512"];
+    },
   },
   methods: {
     ...mapActions(useLayoutStore, ["closeHovers"]),
+    formatOctal(mode) {
+      return (mode & 0o7777).toString(8).padStart(4, "0");
+    },
+    formatPerm(mode) {
+      const triplet = (val) =>
+        `${val & 4 ? "r" : "-"}${val & 2 ? "w" : "-"}${val & 1 ? "x" : "-"}`;
+      const bits = mode & 0o777;
+      return `${triplet(bits >> 6)} ${triplet((bits >> 3) & 7)} ${triplet(
+        bits & 7
+      )}`;
+    },
     checksum: async function (event, algo) {
       event.preventDefault();
 

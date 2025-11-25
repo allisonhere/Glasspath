@@ -1,8 +1,8 @@
 header {
   z-index: 1000;
   background: var(--surfacePrimary);
-  border-bottom: 1px solid var(--divider);
-  box-shadow: 0 0 5px var(--borderPrimary);
+  border-bottom: 1px solid var(--borderPrimary);
+  box-shadow: var(--shadow-soft);
   position: fixed;
   top: 0;
   left: 0;
@@ -12,6 +12,8 @@ header {
   display: flex;
   padding: 0.5em 0.5em 0.5em 1em;
   align-items: center;
+  gap: 0.75em;
+  backdrop-filter: blur(10px);
 }
 
 header > * {
@@ -25,6 +27,8 @@ header title {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 1.2em;
+  font-family: "Space Grotesk", "Inter", "Roboto", sans-serif;
+  font-weight: 600;
 }
 
 header .overlay {
@@ -83,14 +87,15 @@ header .menu-button {
 
 #search #input {
   background: var(--surfaceSecondary);
-  border-color: var(--surfacePrimary);
+  border: 1px solid var(--borderPrimary);
   display: flex;
   height: 100%;
-  padding: 0em 0.75em;
-  border-radius: 0.3em;
-  transition: 0.1s ease all;
+  padding: 0em 0.85em;
+  border-radius: var(--radius-lg);
+  transition: 0.15s ease all;
   align-items: center;
   z-index: 2;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), var(--shadow-soft);
 }
 
 #search #input input::placeholder {
@@ -99,7 +104,7 @@ header .menu-button {
 
 #search.active #input {
   border-bottom: 1px solid var(--borderPrimary);
-  box-shadow: 0 0 5px var(--borderPrimary);
+  box-shadow: var(--shadow-soft);
   background: var(--surfacePrimary);
   height: 4em;
 }

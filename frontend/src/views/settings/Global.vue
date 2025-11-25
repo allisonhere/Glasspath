@@ -9,38 +9,38 @@
 
         <div class="card-content">
           <p>
-            <input type="checkbox" v-model="settings.signup" />
-            {{ t("settings.allowSignup") }}
+            <n-checkbox v-model:checked="settings.signup">
+              {{ t("settings.allowSignup") }}
+            </n-checkbox>
           </p>
 
           <p>
-            <input type="checkbox" v-model="settings.createUserDir" />
-            {{ t("settings.createUserDir") }}
+            <n-checkbox v-model:checked="settings.createUserDir">
+              {{ t("settings.createUserDir") }}
+            </n-checkbox>
           </p>
 
           <p>
-            <input type="checkbox" v-model="settings.hideLoginButton" />
-            {{ t("settings.hideLoginButton") }}
+            <n-checkbox v-model:checked="settings.hideLoginButton">
+              {{ t("settings.hideLoginButton") }}
+            </n-checkbox>
           </p>
 
           <p>
             <label class="small">{{ t("settings.userHomeBasePath") }}</label>
-            <input
-              class="input input--block"
-              type="text"
-              v-model="settings.userHomeBasePath"
-            />
+            <n-input v-model:value="settings.userHomeBasePath" />
           </p>
 
           <p>
             <label for="minimumPasswordLength">{{
               t("settings.minimumPasswordLength")
             }}</label>
-            <vue-number-input
-              controls
-              v-model.number="settings.minimumPasswordLength"
+            <n-input-number
+              v-model:value="settings.minimumPasswordLength"
               id="minimumPasswordLength"
               :min="1"
+              :step="1"
+              button-placement="both"
             />
           </p>
 
@@ -51,11 +51,10 @@
           <div v-if="enableExec">
             <h3>{{ t("settings.executeOnShell") }}</h3>
             <p class="small">{{ t("settings.executeOnShellDescription") }}</p>
-            <input
-              class="input input--block"
+            <n-input
+              v-model:value="shellValue"
               type="text"
               placeholder="bash -c, cmd /c, ..."
-              v-model="shellValue"
             />
           </div>
 
@@ -76,27 +75,23 @@
           </i18n-t>
 
           <p>
-            <input
-              type="checkbox"
-              v-model="settings.branding.disableExternal"
-              id="branding-links"
-            />
-            {{ t("settings.disableExternalLinks") }}
+            <n-checkbox v-model:checked="settings.branding.disableExternal" id="branding-links">
+              {{ t("settings.disableExternalLinks") }}
+            </n-checkbox>
           </p>
 
           <p>
-            <input
-              type="checkbox"
-              v-model="settings.branding.disableUsedPercentage"
+            <n-checkbox
+              v-model:checked="settings.branding.disableUsedPercentage"
               id="branding-used-disk"
-            />
-            {{ t("settings.disableUsedDiskPercentage") }}
+            >
+              {{ t("settings.disableUsedDiskPercentage") }}
+            </n-checkbox>
           </p>
 
           <p>
             <label for="theme">{{ t("settings.themes.title") }}</label>
             <themes
-              class="input input--block"
               v-model:theme="settings.branding.theme"
               id="theme"
             ></themes>
@@ -104,24 +99,14 @@
 
           <p>
             <label for="branding-name">{{ t("settings.instanceName") }}</label>
-            <input
-              class="input input--block"
-              type="text"
-              v-model="settings.branding.name"
-              id="branding-name"
-            />
+            <n-input v-model:value="settings.branding.name" id="branding-name" />
           </p>
 
           <p>
             <label for="branding-files">{{
               t("settings.brandingDirectoryPath")
             }}</label>
-            <input
-              class="input input--block"
-              type="text"
-              v-model="settings.branding.files"
-              id="branding-files"
-            />
+            <n-input v-model:value="settings.branding.files" id="branding-files" />
           </p>
 
           <h3>{{ t("settings.tusUploads") }}</h3>
@@ -133,34 +118,28 @@
               <label for="tus-chunkSize">{{
                 t("settings.tusUploadsChunkSize")
               }}</label>
-              <input
-                class="input input--block"
-                type="text"
-                v-model="formattedChunkSize"
-                id="tus-chunkSize"
-              />
+              <n-input v-model:value="formattedChunkSize" id="tus-chunkSize" />
             </p>
 
             <p>
               <label for="tus-retryCount">{{
                 t("settings.tusUploadsRetryCount")
               }}</label>
-              <vue-number-input
-                controls
-                v-model.number="settings.tus.retryCount"
+              <n-input-number
+                v-model:value="settings.tus.retryCount"
                 id="tus-retryCount"
                 :min="0"
+                :step="1"
+                button-placement="both"
               />
             </p>
           </div>
         </div>
 
         <div class="card-action">
-          <input
-            class="button button--flat"
-            type="submit"
-            :value="t('buttons.update')"
-          />
+          <n-button type="primary" strong block attr-type="submit">
+            {{ t("buttons.update") }}
+          </n-button>
         </div>
       </form>
     </div>
@@ -182,11 +161,9 @@
         </div>
 
         <div class="card-action">
-          <input
-            class="button button--flat"
-            type="submit"
-            :value="t('buttons.update')"
-          />
+          <n-button type="primary" strong block attr-type="submit">
+            {{ t("buttons.update") }}
+          </n-button>
         </div>
       </form>
     </div>
@@ -234,11 +211,9 @@
         </div>
 
         <div class="card-action">
-          <input
-            class="button button--flat"
-            type="submit"
-            :value="t('buttons.update')"
-          />
+          <n-button type="primary" strong block attr-type="submit">
+            {{ t("buttons.update") }}
+          </n-button>
         </div>
       </form>
     </div>

@@ -2,15 +2,26 @@
   background: var(--surfacePrimary);
   color: var(--textSecondary);
   border: 1px solid var(--borderPrimary);
-  border-radius: 0.1em;
-  padding: 0.5em 1em;
-  transition: 0.2s ease all;
+  border-radius: var(--radius-md);
+  padding: 0.65em 1em;
+  transition:
+    0.2s ease all,
+    0.08s ease transform;
   margin: 0;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
 }
 
 .input:hover,
 .input:focus {
   border-color: var(--borderSecondary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.n-input,
+.n-input-number,
+.n-select {
+  width: 100%;
 }
 
 .input--block {

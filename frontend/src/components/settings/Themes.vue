@@ -1,13 +1,15 @@
 <template>
-  <select v-on:change="change" :value="theme">
-    <option value="">{{ t("settings.themes.default") }}</option>
-    <option value="light">{{ t("settings.themes.light") }}</option>
-    <option value="dark">{{ t("settings.themes.dark") }}</option>
-  </select>
+  <n-select
+    :value="theme"
+    :options="themeOptions"
+    size="large"
+    :consistent-menu-width="false"
+    @update:value="onUpdate"
+  />
 </template>
 
 <script setup lang="ts">
-import type { SelectHTMLAttributes } from "vue";
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 
 const { t } = useI18n();
@@ -20,7 +22,15 @@ const emit = defineEmits<{
   (e: "update:theme", val: string | null): void;
 }>();
 
-const change = (event: Event) => {
-  emit("update:theme", (event.target as SelectHTMLAttributes)?.value);
+const themeOptions = computed(() => [
+  { value: "", label: t("settings.themes.default") },
+  { value: "light", label: t("settings.themes.light") },
+  { value: "dawn", label: t("settings.themes.dawn") },
+  { value: "dark", label: t("settings.themes.dark") },
+  { value: "noir", label: t("settings.themes.noir") },
+]);
+
+const onUpdate = (value: string | null) => {
+  emit("update:theme", value);
 };
 </script>

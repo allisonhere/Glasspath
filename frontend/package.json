@@ -31,6 +31,7 @@
     "marked": "^17.0.0",
     "material-icons": "^1.13.14",
     "normalize.css": "^8.0.1",
+    "naive-ui": "^2.39.0",
     "pinia": "^3.0.4",
     "pretty-bytes": "^7.1.0",
     "qrcode.vue": "^3.6.0",

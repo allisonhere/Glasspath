@@ -2,26 +2,45 @@ import { theme } from "./constants";
 import "ace-builds";
 import { themesByName } from "ace-builds/src-noconflict/ext-themelist";
 
-export const getTheme = (): UserTheme => {
-  return (document.documentElement.className as UserTheme) || theme;
+const supportedThemes: UserTheme[] = ["light", "dawn", "dark", "noir"];
+const darkThemes: UserTheme[] = ["dark", "noir"];
+
+const resolveThemeClass = (value: string | undefined | null): UserTheme => {
+  if (!value) return "";
+  const sanitized = value.trim();
+  const matched = supportedThemes.find((t) => t === sanitized);
+  return matched ?? "";
 };
 
-export const setTheme = (theme: UserTheme) => {
+export const getTheme = (): UserTheme => {
+  const classTheme = resolveThemeClass(document.documentElement.className);
+  if (classTheme) return classTheme;
+  const initialTheme = resolveThemeClass(theme);
+  if (initialTheme) return initialTheme;
+  return getMediaPreference();
+};
+
+export const setTheme = (value: UserTheme) => {
   const html = document.documentElement;
-  if (!theme) {
+  if (!value) {
     html.className = getMediaPreference();
-  } else {
-    html.className = theme;
+    return;
   }
+
+  const newTheme = resolveThemeClass(value) || "light";
+  html.className = newTheme;
+};
+
+export const isDarkTheme = (value: UserTheme = getTheme()): boolean => {
+  return darkThemes.includes(value);
 };
 
 export const toggleTheme = (): void => {
+  const paletteOrder: UserTheme[] = ["light", "dawn", "dark", "noir"];
   const activeTheme = getTheme();
-  if (activeTheme === "light") {
-    setTheme("dark");
-  } else {
-    setTheme("light");
-  }
+  const idx = paletteOrder.indexOf(activeTheme);
+  const nextTheme = paletteOrder[(idx + 1) % paletteOrder.length];
+  setTheme(nextTheme);
 };
 
 export const getMediaPreference = (): UserTheme => {

@@ -1,8 +1,15 @@
 body {
-  font-family: "Roboto", sans-serif;
+  font-family: "Inter", "Space Grotesk", "Roboto", "Segoe UI", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
   padding-top: 4em;
-  background: var(--background);
+  background:
+    radial-gradient(120% 120% at 15% 20%, var(--bg-spot-1), transparent),
+    radial-gradient(120% 140% at 85% 10%, var(--bg-spot-2), transparent),
+    var(--background);
   color: var(--textSecondary);
+  min-height: 100vh;
 }
 
 * {
@@ -52,10 +59,17 @@ i.spin {
 }
 
 nav {
-  width: 16em;
+  width: 17em;
   position: fixed;
   top: 4em;
   left: 0;
+  padding: 1em 1em 1.25em;
+  border: 1px solid var(--borderPrimary);
+  border-right: 1px solid var(--borderSecondary);
+  border-radius: 0 1.25em 1.25em 0;
+  background: var(--surfacePrimary);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(12px);
 }
 
 html[dir="rtl"] nav {
@@ -66,12 +80,13 @@ html[dir="rtl"] nav {
 nav .action {
   width: 100%;
   display: block;
-  border-radius: 0;
+  border-radius: var(--radius-md);
   font-size: 1.1em;
-  padding: 0.5em;
+  padding: 0.65em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 0.35em;
 }
 
 html[dir="rtl"] nav .action {
@@ -80,6 +95,7 @@ html[dir="rtl"] nav .action {
 
 nav > div {
   border-top: 1px solid var(--divider);
+  padding-top: 0.35em;
 }
 
 nav .action > * {
@@ -88,17 +104,22 @@ nav .action > * {
 
 main {
   min-height: 1em;
-  margin: 0 1em 1em auto;
-  width: calc(100% - 19em);
+  margin: 0 1.5em 1.5em auto;
+  width: calc(100% - 21em);
+  padding: 1.5em 1.25em 2em;
 }
 
 .breadcrumbs {
-  height: 3em;
-  background: var(--background);
-  border-bottom: 1px solid var(--divider);
+  min-height: 3em;
+  background: var(--surfacePrimary);
+  border: 1px solid var(--borderPrimary);
+  border-radius: var(--radius-lg);
   position: sticky;
   z-index: 1000;
   top: 4em;
+  padding: 0.65em 1em;
+  margin-bottom: 1em;
+  box-shadow: var(--shadow-soft);
 }
 
 .breadcrumbs span,
@@ -106,12 +127,13 @@ main {
   display: flex;
   align-items: center;
   color: var(--textPrimary);
+  gap: 0.35em;
 }
 
 .breadcrumbs a {
   color: inherit;
   transition: 0.1s ease-in;
-  border-radius: 0.125em;
+  border-radius: 999px;
 }
 
 html[dir="rtl"] .breadcrumbs a {
@@ -119,11 +141,11 @@ html[dir="rtl"] .breadcrumbs a {
 }
 
 .breadcrumbs a:hover {
-  background-color: var(--divider);
+  background-color: var(--hover);
 }
 
 .breadcrumbs span a {
-  padding: 0.2em;
+  padding: 0.35em 0.65em;
 }
 
 .files {
@@ -184,4 +206,14 @@ html[dir="rtl"] .breadcrumbs a {
 
 .vfm-modal {
   z-index: 9999999 !important;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Space Grotesk", "Inter", "Roboto", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--textSecondary);
 }

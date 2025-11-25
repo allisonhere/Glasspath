@@ -63,7 +63,7 @@
           icon="file_download"
           :label="t('buttons.download')"
           @action="download"
-          :counter="fileStore.selectedCount"
+          :counter="downloadCounter"
         />
         <action
           v-if="headerButtons.upload"
@@ -286,12 +286,12 @@
             show="delete"
           />
           <action
-            v-if="headerButtons.download"
-            icon="file_download"
-            :label="t('buttons.download')"
-            @action="download"
-            :counter="fileStore.selectedCount"
-          />
+          v-if="headerButtons.download"
+          icon="file_download"
+          :label="t('buttons.download')"
+          @action="download"
+          :counter="downloadCounter"
+        />
           <action icon="info" :label="t('buttons.info')" show="info" />
         </context-menu>
 
@@ -472,6 +472,10 @@ const headerButtons = computed(() => {
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
   };
 });
+
+const downloadCounter = computed(() =>
+  fileStore.selectedCount > 1 ? fileStore.selectedCount : undefined
+);
 
 const isMobile = computed(() => {
   return width.value <= 736;

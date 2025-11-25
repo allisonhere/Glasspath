@@ -51,7 +51,7 @@ import { useLayoutStore } from "@/stores/layout";
 
 import { commands } from "@/api";
 import { throttle } from "lodash-es";
-import { theme } from "@/utils/constants";
+import { getTheme, isDarkTheme } from "@/utils/theme";
 
 export default {
   name: "shell",
@@ -84,10 +84,11 @@ export default {
   methods: {
     ...mapActions(useLayoutStore, ["toggleShell"]),
     checkTheme() {
-      if (theme == "dark") {
+      const activeTheme = getTheme();
+      if (isDarkTheme(activeTheme)) {
         return "rgba(255, 255, 255, 0.4)";
       }
-      return "rgba(127, 127, 127, 0.4)";
+      return "rgba(15, 23, 42, 0.35)";
     },
     startDrag() {
       document.addEventListener("pointermove", this.handleDrag);
