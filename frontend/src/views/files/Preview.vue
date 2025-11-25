@@ -380,6 +380,16 @@ const permText = computed(() => {
   return `${formatPerm(mode)} (${formatOctal(mode)})`;
 });
 
+const formatOctal = (mode: number) =>
+  (mode & 0o7777).toString(8).padStart(4, "0");
+
+const formatPerm = (mode: number) => {
+  const triplet = (val: number) =>
+    `${val & 4 ? "r" : "-"}${val & 2 ? "w" : "-"}${val & 1 ? "x" : "-"}`;
+  const bits = mode & 0o777;
+  return `${triplet(bits >> 6)}${triplet((bits >> 3) & 7)}${triplet(bits & 7)}`;
+};
+
 const resolutionText = computed(() => {
   const res = fileStore.req?.resolution;
   if (!res) return "";

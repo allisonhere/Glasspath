@@ -244,12 +244,12 @@ html[dir="rtl"] #listing {
   display: inline-flex;
   align-items: center;
   gap: 0.25em;
-  padding: 0.35em 0.6em;
-  border-radius: 999px;
+  padding: 0.25em 0.5em;
+  border-radius: 12px;
   background: var(--surfaceMuted);
   color: var(--textSecondary);
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   border: 1px solid var(--borderPrimary);
 }
 
