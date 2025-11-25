@@ -8,7 +8,15 @@ import type {
   ToastOptions,
   PluginOptions,
 } from "vue-toastification/dist/types/types";
-import { create, NButton, NCheckbox, NInput, NInputNumber, NSelect } from "naive-ui";
+import {
+  create,
+  NButton,
+  NCheckbox,
+  NInput,
+  NInputNumber,
+  NSelect,
+  NModal,
+} from "naive-ui";
 import createPinia from "@/stores";
 import router from "@/router";
 import i18n, { isRtl } from "@/i18n";
@@ -30,7 +38,7 @@ dayjs.extend(duration);
 const pinia = createPinia(router);
 const vfm = createVfm();
 const naive = create({
-  components: [NButton, NCheckbox, NInput, NInputNumber, NSelect],
+  components: [NButton, NCheckbox, NInput, NInputNumber, NSelect, NModal],
 });
 
 const app = createApp(App);

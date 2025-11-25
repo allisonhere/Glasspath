@@ -1,5 +1,10 @@
 <template>
   <div>
+    <command-palette
+      v-model:open="paletteOpen"
+      :commands="paletteCommands"
+      @run="runCommand"
+    />
     <header-bar showMenu showLogo>
       <search />
       <title />
@@ -222,6 +227,8 @@
             v-bind:type="item.type"
             v-bind:size="item.size"
             v-bind:path="item.path"
+            :isShared="item.isDir ? !!item.token : !!item.token"
+            :mode="item.mode"
           >
           </item>
         </div>
@@ -244,6 +251,8 @@
             v-bind:type="item.type"
             v-bind:size="item.size"
             v-bind:path="item.path"
+            :isShared="item.isDir ? !!item.token : !!item.token"
+            :mode="item.mode"
           >
           </item>
         </div>
@@ -347,6 +356,7 @@ import Action from "@/components/header/Action.vue";
 import Search from "@/components/Search.vue";
 import Item from "@/components/files/ListingItem.vue";
 import ContextMenu from "@/components/ContextMenu.vue";
+import CommandPalette from "@/components/CommandPalette.vue";
 import {
   computed,
   inject,
@@ -356,10 +366,11 @@ import {
   ref,
   watch,
 } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 import { removePrefix } from "@/api/utils";
+import { toggleTheme } from "@/utils/theme";
 
 const showLimit = ref<number>(50);
 const columnWidth = ref<number>(280);
@@ -379,6 +390,7 @@ const layoutStore = useLayoutStore();
 const { req } = storeToRefs(fileStore);
 
 const route = useRoute();
+const router = useRouter();
 
 const { t } = useI18n();
 
@@ -477,8 +489,98 @@ const downloadCounter = computed(() =>
   fileStore.selectedCount > 1 ? fileStore.selectedCount : undefined
 );
 
+const paletteOpen = ref(false);
+
 const isMobile = computed(() => {
   return width.value <= 736;
+});
+
+const visibleItems = computed(() => [...dirs.value, ...files.value]);
+
+const paletteCommands = computed(() => {
+  const cmds: Array<{ id: string; label: string; description?: string; shortcut?: string; disabled?: boolean }> = [
+    {
+      id: "search",
+      label: t("buttons.search"),
+      description: t("files.search") ?? "Search in this folder",
+      shortcut: "Ctrl/Cmd + F",
+    },
+    {
+      id: "toggle-theme",
+      label: t("settings.themes.title"),
+      description: "Cycle active theme",
+      shortcut: "Ctrl/Cmd + J",
+    },
+    {
+      id: "new-folder",
+      label: t("prompts.newDir"),
+      description: t("prompts.newDirMessage"),
+      disabled: !authStore.user?.perm.create,
+      shortcut: "N",
+    },
+    {
+      id: "new-file",
+      label: t("prompts.newFile"),
+      description: t("prompts.newFileMessage"),
+      disabled: !authStore.user?.perm.create,
+      shortcut: "Shift + N",
+    },
+    {
+      id: "upload",
+      label: t("buttons.upload"),
+      description: t("prompts.uploadMessage"),
+      disabled: !authStore.user?.perm.create,
+      shortcut: "U",
+    },
+    {
+      id: "download",
+      label: t("buttons.download"),
+      description: t("prompts.download"),
+      disabled: !authStore.user?.perm.download,
+      shortcut: "D",
+    },
+    {
+      id: "toggle-view",
+      label: t("buttons.switchView"),
+      description: "Switch layout",
+      shortcut: "V",
+    },
+    {
+      id: "multi-select",
+      label: t("buttons.selectMultiple"),
+      description: t("files.multipleSelectionEnabled"),
+      shortcut: "M",
+    },
+    {
+      id: "info",
+      label: t("buttons.info"),
+      description: t("prompts.fileInfo"),
+      disabled: !fileStore.selectedCount,
+      shortcut: "I",
+    },
+    {
+      id: "rename",
+      label: t("buttons.rename"),
+      description: t("prompts.renameMessage"),
+      disabled: !(authStore.user?.perm.rename && fileStore.selectedCount === 1),
+      shortcut: "F2",
+    },
+    {
+      id: "delete",
+      label: t("buttons.delete"),
+      description: t("prompts.deleteMessageSingle"),
+      disabled: !(authStore.user?.perm.delete && fileStore.selectedCount > 0),
+      shortcut: "Del",
+    },
+    {
+      id: "shell",
+      label: t("buttons.shell"),
+      description: "Open shell",
+      disabled: !(authStore.user?.perm.execute && enableExec),
+      shortcut: "`",
+    },
+  ];
+  return cmds;
 });
 
 watch(req, () => {
@@ -538,7 +640,54 @@ onBeforeUnmount(() => {
 
 const base64 = (name: string) => Base64.encodeURI(name);
 
+const focusVisibleItem = (index: number) => {
+  const el = document.querySelector(
+    `#listing .item[data-index="${index}"]`
+  ) as HTMLElement | null;
+  el?.scrollIntoView({ block: "center" });
+};
+
+const moveSelection = (delta: number) => {
+  if (!visibleItems.value.length) return;
+  let currentIdx = visibleItems.value.findIndex((item) =>
+    fileStore.selected.includes(item.index)
+  );
+  if (currentIdx === -1) currentIdx = delta > 0 ? -1 : 0;
+  const nextIdx =
+    (currentIdx + delta + visibleItems.value.length) %
+    visibleItems.value.length;
+  fileStore.selected = [visibleItems.value[nextIdx].index];
+  focusVisibleItem(visibleItems.value[nextIdx].index);
+};
+
+const openSelection = () => {
+  if (!fileStore.req || fileStore.selectedCount === 0) return;
+  const selectedIdx = fileStore.selected[0];
+  const item = fileStore.req.items[selectedIdx];
+  if (!item) return;
+  router.push({ path: item.url });
+};
+
 const keyEvent = (event: KeyboardEvent) => {
+  const target = event.target as HTMLElement | null;
+  if (
+    target &&
+    (target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.tagName === "SELECT" ||
+      target.isContentEditable)
+  ) {
+    return;
+  }
+
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    paletteOpen.value = true;
+    return;
+  }
+
+  if (paletteOpen.value) return;
+
   // No prompts are shown
   if (layoutStore.currentPrompt !== null) {
     return;
@@ -561,6 +710,20 @@ const keyEvent = (event: KeyboardEvent) => {
 
     // Show rename prompt.
     layoutStore.showHover("rename");
+  }
+
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    moveSelection(1);
+  }
+
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    moveSelection(-1);
+  }
+
+  if (event.key === "Enter") {
+    openSelection();
   }
 
   // Ctrl is pressed
@@ -909,6 +1072,47 @@ const openSearch = () => {
 const toggleMultipleSelection = () => {
   fileStore.toggleMultiple();
   layoutStore.closeHovers();
+};
+
+const runCommand = (id: string) => {
+  switch (id) {
+    case "search":
+      openSearch();
+      break;
+    case "toggle-theme":
+      toggleTheme();
+      break;
+    case "new-folder":
+      layoutStore.showHover("newDir");
+      break;
+    case "new-file":
+      layoutStore.showHover("newFile");
+      break;
+    case "upload":
+      uploadFunc();
+      break;
+    case "download":
+      download();
+      break;
+    case "toggle-view":
+      switchView();
+      break;
+    case "multi-select":
+      toggleMultipleSelection();
+      break;
+    case "info":
+      layoutStore.showHover("info");
+      break;
+    case "rename":
+      layoutStore.showHover("rename");
+      break;
+    case "delete":
+      layoutStore.showHover("delete");
+      break;
+    case "shell":
+      layoutStore.toggleShell();
+      break;
+  }
 };
 
 const windowsResize = throttle(() => {

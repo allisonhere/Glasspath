@@ -4,6 +4,7 @@
     role="button"
     tabindex="0"
     :draggable="isDraggable"
+    :data-index="index"
     @dragstart="dragStart"
     @dragover="dragOver"
     @drop="drop"
@@ -32,6 +33,17 @@
 
     <div>
       <p class="name">{{ name }}</p>
+      <div class="badges" v-if="itemBadges.length">
+        <span
+          v-for="badge in itemBadges"
+          :key="badge.text"
+          class="file-badge"
+          :class="badge.class"
+        >
+          <i class="material-icons" v-if="badge.icon">{{ badge.icon }}</i>
+          <span>{{ badge.text }}</span>
+        </span>
+      </div>
 
       <p v-if="isDir" class="size" data-order="-1">&mdash;</p>
       <p v-else class="size" :data-order="humanSize()">{{ humanSize() }}</p>
@@ -77,6 +89,8 @@ const props = defineProps<{
   index: number;
   readOnly?: boolean;
   path?: string;
+  isShared?: boolean;
+  mode?: number;
 }>();
 
 const authStore = useAuthStore();
@@ -127,6 +141,28 @@ const humanTime = () => {
     return dayjs(props.modified).format("L LT");
   }
   return dayjs(props.modified).fromNow();
+};
+
+const itemBadges = computed(() => {
+  const out: Array<{ text: string; icon?: string; class?: string }> = [];
+  if (props.isShared) {
+    out.push({ text: "Shared", icon: "link", class: "file-badge--share" });
+  }
+  if (!props.isDir && props.mode !== undefined) {
+    out.push({
+      text: formatPerm(props.mode),
+      icon: "lock_open",
+      class: "file-badge--perm",
+    });
+  }
+  return out;
+});
+
+const formatPerm = (mode: number) => {
+  const triplet = (val: number) =>
+    `${val & 4 ? "r" : "-"}${val & 2 ? "w" : "-"}${val & 1 ? "x" : "-"}`;
+  const bits = mode & 0o777;
+  return `${triplet(bits >> 6)}${triplet((bits >> 3) & 7)}${triplet(bits & 7)}`;
 };
 
 const dragStart = () => {

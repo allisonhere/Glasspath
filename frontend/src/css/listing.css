@@ -165,6 +165,23 @@ html[dir="rtl"] #listing {
   border: 1px solid var(--borderPrimary);
   padding: 1em;
   border-top: 0;
+  border-left: 0;
+  border-right: 0;
+  transition:
+    0.14s ease background,
+    0.14s ease transform,
+    0.14s ease box-shadow;
+  position: relative;
+}
+
+#listing.list .item:nth-child(odd) {
+  background: var(--surfaceSecondary);
+}
+
+#listing.list .item:hover {
+  background: var(--surfacePrimary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
 }
 
 #listing.list h2 {
@@ -174,6 +191,10 @@ html[dir="rtl"] #listing {
 #listing .item[aria-selected="true"] {
   background: var(--blue) !important;
   color: var(--iconSecondary) !important;
+}
+
+#listing.list .item[aria-selected="true"] {
+  box-shadow: 0 10px 35px rgba(124, 58, 237, 0.18);
 }
 
 #listing.list .item div:first-of-type {
@@ -193,6 +214,14 @@ html[dir="rtl"] #listing {
   width: calc(100% - 3em);
   display: flex;
   align-items: center;
+  gap: 0.5em;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  margin-top: 0.25em;
 }
 
 #listing.list .item .name {
@@ -201,6 +230,30 @@ html[dir="rtl"] #listing {
 
 #listing.list .item .size {
   width: 25%;
+}
+
+.file-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.35em 0.6em;
+  border-radius: 999px;
+  background: var(--surfaceMuted);
+  color: var(--textSecondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  border: 1px solid var(--borderPrimary);
+}
+
+.file-badge--perm {
+  background: rgba(124, 58, 237, 0.14);
+  color: var(--textSecondary);
+  border-color: rgba(124, 58, 237, 0.28);
+}
+
+.file-badge--share {
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.25);
 }
 
 #listing .item.header {
@@ -216,11 +269,14 @@ html[dir="rtl"] #listing {
 
 #listing.list .item.header {
   display: flex !important;
-  background: var(--background);
-  z-index: 999;
-  padding: 0.85em;
+  position: sticky;
+  top: 4em;
+  background: var(--surfacePrimary);
+  z-index: 5;
+  padding: 0.75em 1em;
   border: 0;
   border-bottom: 1px solid var(--borderPrimary);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
 #listing.list .item.header > div {
@@ -244,6 +300,8 @@ html[dir="rtl"] #listing {
 
 #listing.list .header span {
   vertical-align: middle;
+  font-weight: 600;
+  color: var(--textSecondary);
 }
 
 #listing.list .header i {

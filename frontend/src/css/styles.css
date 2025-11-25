@@ -545,6 +545,78 @@ html[dir="rtl"] .breadcrumbs .chevron {
   margin-top: 0.5em;
 }
 
+.command-palette .n-card {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-strong);
+  background: var(--surfacePrimary);
+  border: 1px solid var(--borderPrimary);
+}
+
+.command-palette__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+  min-width: 26rem;
+}
+
+.command-palette__list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--borderPrimary);
+  border-radius: var(--radius-md);
+  background: var(--surfaceSecondary);
+}
+
+.command-palette__item {
+  padding: 0.65em 0.8em;
+  cursor: pointer;
+  transition: 0.12s ease all;
+  border-bottom: 1px solid var(--borderPrimary);
+}
+
+.command-palette__item:last-child {
+  border-bottom: 0;
+}
+
+.command-palette__item:hover,
+.command-palette__item.active {
+  background: var(--hover);
+}
+
+.command-palette__item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.command-palette__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--textSecondary);
+  font-weight: 600;
+}
+
+.command-palette__description {
+  margin: 0.1em 0 0;
+  color: var(--textPrimary);
+  font-size: 0.9rem;
+}
+
+.command-palette__shortcut {
+  font-size: 0.8rem;
+  color: var(--textPrimary);
+  background: var(--surfacePrimary);
+  border: 1px solid var(--borderPrimary);
+  padding: 0.15em 0.4em;
+  border-radius: var(--radius-sm);
+}
+
+.command-palette__empty {
+  padding: 0.8em;
+  text-align: center;
+  color: var(--textPrimary);
+}
+
 /* * * * * * * * * * * * * * * *
  *         RTL overrides       *
  * * * * * * * * * * * * * * * */
