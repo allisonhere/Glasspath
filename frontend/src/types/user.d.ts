@@ -64,4 +64,4 @@ interface IRegexp {
   raw: string;
 }
 
-type UserTheme = "" | "light" | "dark" | "dawn" | "noir";
+type UserTheme = "" | "light" | "dark" | "dawn" | "noir" | "glass" | "pro";

@@ -184,6 +184,14 @@ html[dir="rtl"] #listing {
   box-shadow: var(--shadow-soft);
 }
 
+:root.pro #listing.list .item {
+  padding: 0.65em 0.85em;
+}
+
+:root.pro #listing.list .item .name {
+  width: 45%;
+}
+
 #listing.list h2 {
   display: none;
 }

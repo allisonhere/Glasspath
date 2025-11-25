@@ -1,6 +1,6 @@
 # Glasspath
 
-Glasspath is a themed and slightly modernized fork of [File Browser](https://github.com/filebrowser/filebrowser) that keeps the familiar single-binary file manager while layering updated styling (Obsidian-inspired darks, neon accents, refreshed info panels, and Vue/Naive UI components).
+Glasspath is a themed and modernized fork of [File Browser](https://github.com/filebrowser/filebrowser) that keeps the familiar single-binary file manager while layering updated styling (Obsidian/Glassmorphism/Pro themes), refreshed info panels, command palette + keyboard shortcuts, and Vue/Naive UI components.
 
 > **Credit:** The core application, server, and original frontend are by the File Browser contributors under the Apache 2.0 license. This fork builds on their work—see [LICENSE](LICENSE) for details.
 
@@ -10,7 +10,7 @@ Backend:
 - Go 1.25+: `go run .` (serves API on `:8080` by default)
 
 Frontend:
-- From `frontend/`: `pnpm install` (set `PNPM_IGNORE_NODEENGINE_CHECK=1` if you stay on Node 20), then `pnpm dev`
+- From `frontend/`: `pnpm install` (set `PNPM_IGNORE_NODEENGINE_CHECK=1` if you stay on Node 20), then `pnpm dev` (add `--host 0.0.0.0 --port 5173` for LAN)
 - Visit `http://localhost:5173` (proxies API to `:8080`)
 
 Production build:
@@ -19,8 +19,9 @@ Production build:
 
 ## Notes
 
-- Themes: choose Light, Dawn, Dark, or Noir in Settings → Branding. Noir uses neutral charcoal backgrounds with purple accents.
-- The “Info” panel shows size, modified time, resolution (for images), permissions (symbolic + octal), and checksums on demand.
+- Themes: Light, Dawn, Dark, Noir, Glassmorphism, Pro (dense). Use Settings → Branding or the command palette (Ctrl/Cmd+K) to switch.
+- UI: command palette, keyboard navigation (arrows/Enter, search/download/rename/delete shortcuts), badges for shared/permissions, sticky headers, and richer previews with metadata sidebar/zoom.
+- Info panel: size, modified time, resolution (images), permissions (symbolic + octal), and checksums on demand.
 
 ## Contributing
 

@@ -28,6 +28,8 @@ const themeOptions = computed(() => [
   { value: "dawn", label: t("settings.themes.dawn") },
   { value: "dark", label: t("settings.themes.dark") },
   { value: "noir", label: t("settings.themes.noir") },
+  { value: "glass", label: t("settings.themes.glass") },
+  { value: "pro", label: t("settings.themes.pro") },
 ]);
 
 const onUpdate = (value: string | null) => {

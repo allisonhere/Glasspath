@@ -370,7 +370,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { storeToRefs } from "pinia";
 import { removePrefix } from "@/api/utils";
-import { toggleTheme } from "@/utils/theme";
+import { toggleTheme, setTheme } from "@/utils/theme";
 
 const showLimit = ref<number>(50);
 const columnWidth = ref<number>(280);
@@ -510,6 +510,16 @@ const paletteCommands = computed(() => {
       label: t("settings.themes.title"),
       description: "Cycle active theme",
       shortcut: "Ctrl/Cmd + J",
+    },
+    {
+      id: "theme-glass",
+      label: t("settings.themes.glass"),
+      description: "Enable glassmorphism",
+    },
+    {
+      id: "theme-pro",
+      label: t("settings.themes.pro"),
+      description: "Compact, high-contrast",
     },
     {
       id: "new-folder",
@@ -1081,6 +1091,12 @@ const runCommand = (id: string) => {
       break;
     case "toggle-theme":
       toggleTheme();
+      break;
+    case "theme-glass":
+      setTheme("glass");
+      break;
+    case "theme-pro":
+      setTheme("pro");
       break;
     case "new-folder":
       layoutStore.showHover("newDir");

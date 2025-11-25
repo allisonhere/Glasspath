@@ -418,6 +418,47 @@ main .spinner .bounce2 {
   color: #fff;
 }
 
+:root.pro .card {
+  padding: 0.75em 1em;
+}
+
+:root.pro header {
+  height: 3.5em;
+  padding: 0.4em 0.6em 0.4em 0.8em;
+}
+
+:root.pro .action {
+  padding: 0.1em;
+}
+
+:root.glass nav,
+:root.glass .breadcrumbs,
+:root.glass header {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(20px);
+}
+
+:root.glass .card {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--textSecondary);
+}
+
+:root.glass .n-base-select-menu,
+:root.glass .n-select-menu {
+  background: rgba(12, 15, 23, 0.92) !important;
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: var(--shadow-soft);
+}
+
+:root.glass .n-base-select-option,
+:root.glass .n-base-select-option__content {
+  color: var(--textSecondary);
+}
+
 /* EDITOR */
 
 #editor-container {

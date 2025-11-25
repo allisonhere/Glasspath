@@ -2,8 +2,9 @@ import { theme } from "./constants";
 import "ace-builds";
 import { themesByName } from "ace-builds/src-noconflict/ext-themelist";
 
-const supportedThemes: UserTheme[] = ["light", "dawn", "dark", "noir"];
-const darkThemes: UserTheme[] = ["dark", "noir"];
+const THEME_STORAGE_KEY = "filebrowser-theme";
+const supportedThemes: UserTheme[] = ["light", "dawn", "dark", "noir", "glass", "pro"];
+const darkThemes: UserTheme[] = ["dark", "noir", "glass", "pro"];
 
 const resolveThemeClass = (value: string | undefined | null): UserTheme => {
   if (!value) return "";
@@ -13,6 +14,8 @@ const resolveThemeClass = (value: string | undefined | null): UserTheme => {
 };
 
 export const getTheme = (): UserTheme => {
+  const stored = resolveThemeClass(localStorage.getItem(THEME_STORAGE_KEY));
+  if (stored) return stored;
   const classTheme = resolveThemeClass(document.documentElement.className);
   if (classTheme) return classTheme;
   const initialTheme = resolveThemeClass(theme);
@@ -24,11 +27,13 @@ export const setTheme = (value: UserTheme) => {
   const html = document.documentElement;
   if (!value) {
     html.className = getMediaPreference();
+    localStorage.removeItem(THEME_STORAGE_KEY);
     return;
   }
 
   const newTheme = resolveThemeClass(value) || "light";
   html.className = newTheme;
+  localStorage.setItem(THEME_STORAGE_KEY, newTheme);
 };
 
 export const isDarkTheme = (value: UserTheme = getTheme()): boolean => {

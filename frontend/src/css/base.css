@@ -109,6 +109,19 @@ main {
   padding: 1.5em 1.25em 2em;
 }
 
+:root.glass body {
+  backdrop-filter: blur(18px);
+}
+
+:root.pro body {
+  letter-spacing: 0;
+}
+
+:root.pro main {
+  padding: 1em 0.8em 1.5em;
+  width: calc(100% - 20em);
+}
+
 .breadcrumbs {
   min-height: 3em;
   background: var(--surfacePrimary);
