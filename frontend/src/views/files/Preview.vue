@@ -57,7 +57,24 @@
     </div>
     <template v-else>
       <div class="preview">
-        <div v-if="isEpub" class="epub-reader">
+        <div class="preview__layout">
+          <div class="preview__media">
+            <div class="preview__meta-badges">
+              <span class="file-badge" v-if="isImage && resolutionText">
+                <i class="material-icons">photo_size_select_large</i>
+                {{ resolutionText }}
+              </span>
+              <span class="file-badge" v-if="mediaDuration">
+                <i class="material-icons">schedule</i>
+                {{ mediaDuration }}
+              </span>
+              <span class="file-badge" v-if="bitrate">
+                <i class="material-icons">speed</i>
+                {{ bitrate }}
+              </span>
+            </div>
+
+            <div v-if="isEpub" class="epub-reader">
           <vue-reader
             :location="location"
             :url="previewUrl"
@@ -86,52 +103,105 @@
             </button>
             <span>{{ size }}%</span>
           </div>
-        </div>
-        <ExtendedImage
-          v-else-if="fileStore.req?.type == 'image'"
-          :src="previewUrl"
-        />
-        <audio
-          v-else-if="fileStore.req?.type == 'audio'"
-          ref="player"
-          :src="previewUrl"
-          controls
-          :autoplay="autoPlay"
-          @play="autoPlay = true"
-        ></audio>
-        <VideoPlayer
-          v-else-if="fileStore.req?.type == 'video'"
-          ref="player"
-          :source="previewUrl"
-          :subtitles="subtitles"
-          :options="videoOptions"
-        >
-        </VideoPlayer>
-        <object v-else-if="isPdf" class="pdf" :data="previewUrl"></object>
-        <div v-else-if="fileStore.req?.type == 'blob'" class="info">
-          <div class="title">
-            <i class="material-icons">feedback</i>
-            {{ $t("files.noPreview") }}
           </div>
-          <div>
-            <a target="_blank" :href="downloadUrl" class="button button--flat">
-              <div>
-                <i class="material-icons">file_download</i
-                >{{ $t("buttons.download") }}
-              </div>
-            </a>
-            <a
-              target="_blank"
-              :href="previewUrl"
-              class="button button--flat"
-              v-if="!fileStore.req?.isDir"
-            >
-              <div>
-                <i class="material-icons">open_in_new</i
-                >{{ $t("buttons.openFile") }}
-              </div>
-            </a>
+          <div
+            v-else-if="fileStore.req?.type == 'image'"
+            class="preview__zoom"
+            :style="{ '--scale': zoom }"
+          >
+            <ExtendedImage :src="previewUrl" @load="resetZoom" />
+            <div class="preview__zoom-controls">
+              <button class="button button--flat" @click="stepZoom(-0.1)">
+                <i class="material-icons">remove</i>
+              </button>
+              <button class="button button--flat" @click="resetZoom()">
+                <i class="material-icons">center_focus_strong</i>
+              </button>
+              <button class="button button--flat" @click="stepZoom(0.1)">
+                <i class="material-icons">add</i>
+              </button>
+            </div>
           </div>
+          <audio
+            v-else-if="fileStore.req?.type == 'audio'"
+            ref="player"
+            :src="previewUrl"
+            controls
+            :autoplay="autoPlay"
+            @play="autoPlay = true"
+            @loadedmetadata="onMediaMeta"
+          ></audio>
+          <VideoPlayer
+            v-else-if="fileStore.req?.type == 'video'"
+            ref="player"
+            :source="previewUrl"
+            :subtitles="subtitles"
+            :options="videoOptions"
+            @loadedmetadata="onMediaMeta"
+          >
+          </VideoPlayer>
+          <object
+            v-else-if="isPdf"
+            class="pdf"
+            :data="previewUrl"
+            @load="resetZoom"
+          ></object>
+          <div v-else-if="fileStore.req?.type == 'blob'" class="info">
+            <div class="title">
+              <i class="material-icons">feedback</i>
+              {{ $t("files.noPreview") }}
+            </div>
+            <div>
+              <a target="_blank" :href="downloadUrl" class="button button--flat">
+                <div>
+                  <i class="material-icons">file_download</i
+                  >{{ $t("buttons.download") }}
+                </div>
+              </a>
+              <a
+                target="_blank"
+                :href="previewUrl"
+                class="button button--flat"
+                v-if="!fileStore.req?.isDir"
+              >
+                <div>
+                  <i class="material-icons">open_in_new</i
+                  >{{ $t("buttons.openFile") }}
+                </div>
+              </a>
+            </div>
+          </div>
+          </div>
+          <aside class="preview__sidebar" v-if="fileStore.req">
+            <p class="preview__eyebrow">{{ fileStore.req.type }}</p>
+            <h3 class="preview__filename">{{ name }}</h3>
+            <div class="preview__info">
+              <div>
+                <span class="preview__label">{{ $t("prompts.size") }}</span>
+                <span class="preview__value">{{ humanSize }}</span>
+              </div>
+              <div>
+                <span class="preview__label">{{ $t("prompts.lastModified") }}</span>
+                <span class="preview__value">{{ humanTime }}</span>
+              </div>
+              <div v-if="permText">
+                <span class="preview__label">{{ $t("prompts.permissions") }}</span>
+                <span class="preview__value">{{ permText }}</span>
+              </div>
+              <div v-if="resolutionText && isImage">
+                <span class="preview__label">{{ $t("prompts.resolution") }}</span>
+                <span class="preview__value">{{ resolutionText }}</span>
+              </div>
+              <div v-if="bitrate">
+                <span class="preview__label">Bitrate</span>
+                <span class="preview__value">{{ bitrate }}</span>
+              </div>
+              <div v-if="mediaDuration">
+                <span class="preview__label">{{ $t("prompts.duration") || "Duration" }}</span>
+                <span class="preview__value">{{ mediaDuration }}</span>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </template>
@@ -181,6 +251,8 @@ import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import type { Rendition } from "epubjs";
 import { getTheme } from "@/utils/theme";
+import { filesize } from "@/utils";
+import dayjs from "dayjs";
 
 const location = useStorage("book-progress", 0, undefined, {
   serializer: {
@@ -281,6 +353,7 @@ const isEpub = computed(
 );
 
 const isResizeEnabled = computed(() => resizePreview);
+const isImage = computed(() => fileStore.req?.type === "image");
 
 const subtitles = computed(() => {
   if (fileStore.req?.subtitles) {
@@ -292,6 +365,45 @@ const subtitles = computed(() => {
 const videoOptions = computed(() => {
   return { autoplay: autoPlay.value };
 });
+
+const humanSize = computed(() =>
+  fileStore.req ? filesize(fileStore.req.size) : ""
+);
+
+const humanTime = computed(() =>
+  fileStore.req ? dayjs(fileStore.req.modified).fromNow() : ""
+);
+
+const permText = computed(() => {
+  const mode = fileStore.req?.mode;
+  if (mode === undefined) return "";
+  return `${formatPerm(mode)} (${formatOctal(mode)})`;
+});
+
+const resolutionText = computed(() => {
+  const res = fileStore.req?.resolution;
+  if (!res) return "";
+  return `${res.width}×${res.height}`;
+});
+
+const mediaDuration = computed(() => {
+  if (!durationSeconds.value) return "";
+  const minutes = Math.floor(durationSeconds.value / 60);
+  const seconds = Math.floor(durationSeconds.value % 60)
+    .toString()
+    .padStart(2, "0");
+  return `${minutes}:${seconds}`;
+});
+
+const bitrate = computed(() => {
+  if (!durationSeconds.value || !fileStore.req?.size) return "";
+  const bits = fileStore.req.size * 8;
+  const kbps = Math.round(bits / durationSeconds.value / 1000);
+  return `${kbps} kbps`;
+});
+
+const durationSeconds = ref<number | null>(null);
+const zoom = ref<number>(1);
 
 watch(route, () => {
   updatePreview();
@@ -428,6 +540,20 @@ const toggleNavigation = throttle(function () {
     navTimeout.value = null;
   }, 1500);
 }, 500);
+
+const onMediaMeta = () => {
+  const el = player.value as HTMLMediaElement | null;
+  if (!el || Number.isNaN(el.duration)) return;
+  durationSeconds.value = el.duration;
+};
+
+const stepZoom = (delta: number) => {
+  zoom.value = Math.min(Math.max(0.5, zoom.value + delta), 3);
+};
+
+const resetZoom = () => {
+  zoom.value = 1;
+};
 
 const close = () => {
   const uri = url.removeLastDir(route.path) + "/";
