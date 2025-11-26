@@ -193,6 +193,13 @@ prompt_choice() {
   printf "%s\n" "${options[$idx]}"
 }
 
+current_unit_user() {
+  local unit="/etc/systemd/system/${SERVICE_NAME}.service"
+  if [[ -f "$unit" ]]; then
+    awk -F= '/^User=/ {print $2}' "$unit" | head -1
+  fi
+}
+
 do_install_flow() {
   local mode="$1"
   local url tarball
@@ -264,6 +271,20 @@ main() {
     esac
   else
     log "No existing installation detected; proceeding with fresh install."
+  fi
+
+  if [[ -t 0 ]]; then
+    local existing_user
+    existing_user="$(current_unit_user)"
+    local default_user="${SERVICE_USER}"
+    [[ -n "$existing_user" ]] && default_user="$existing_user"
+    read -rp "Service user to run as [${default_user}]: " input_user
+    if [[ -n "$input_user" ]]; then
+      SERVICE_USER="$input_user"
+    else
+      SERVICE_USER="$default_user"
+    fi
+    BIN_PATH="${INSTALL_DIR}/glasspath"
   fi
 
   do_install_flow "$mode"
