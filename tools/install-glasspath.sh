@@ -127,12 +127,27 @@ prompt_choice() {
     echo "  [$i] $opt"
     i=$((i+1))
   done
-  read -rp "> " choice
-  if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
-    echo ""
+  # If stdin is not a TTY (e.g., piped), default to first option.
+  if [[ ! -t 0 ]]; then
+    echo "${options[0]}"
     return 0
   fi
-  echo "${options[$((choice-1))]}"
+  read -rp "> " choice
+  # Default to first option on empty input.
+  if [[ -z "$choice" ]]; then
+    echo "${options[0]}"
+    return 0
+  fi
+  if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+    echo "invalid"
+    return 0
+  fi
+  local idx=$((choice-1))
+  if (( idx < 0 || idx >= ${#options[@]} )); then
+    echo "invalid"
+    return 0
+  fi
+  echo "${options[$idx]}"
 }
 
 do_install_flow() {
