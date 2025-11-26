@@ -13,6 +13,27 @@ PUSH_TAG="${PUSH_TAG:-0}"    # set to 1 to git push the release tag
 GH_REPO="${GH_REPO:-}"
 ALLOW_EXISTING_TAG="${ALLOW_EXISTING_TAG:-1}" # if tag exists remotely and PUSH_TAG=1, skip push and continue
 
+if [[ -t 0 && "${CI:-}" != "true" ]]; then
+  if [[ -z "$VERSION" ]]; then
+    if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+      default_version="$(git describe --tags --abbrev=0)"
+    else
+      default_version="$(date +%Y.%m.%d)"
+    fi
+    read -rp "Release version [${default_version}]: " input_version
+    VERSION="${input_version:-$default_version}"
+  fi
+
+  read -rp "Publish to GitHub after build? [y/N]: " ans_pub
+  if [[ "$ans_pub" =~ ^[Yy] ]]; then PUBLISH=1; else PUBLISH=0; fi
+
+  read -rp "Push tag to origin? [y/N]: " ans_tag
+  if [[ "$ans_tag" =~ ^[Yy] ]]; then PUSH_TAG=1; else PUSH_TAG=0; fi
+
+  read -rp "Auto-bump patch if tag exists? [y/N]: " ans_bump
+  if [[ "$ans_bump" =~ ^[Yy] ]]; then AUTO_BUMP_PATCH=1; else AUTO_BUMP_PATCH=0; fi
+fi
+
 # Colors for nicer output
 GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
@@ -69,19 +90,9 @@ log "Push tag: ${PUSH_TAG}"
 
 TAR_VERSION="${VERSION#v}"
 
-# Interactive publish prompt when allowed.
+# If still "ask" (non-interactive), default to 0.
 if [[ "$PUBLISH" == "ask" ]]; then
-  if [[ -t 0 && "${CI:-}" != "true" ]]; then
-    read -rp "Publish to GitHub after build? [y/N]: " ans
-    if [[ "$ans" =~ ^[Yy] ]]; then
-      PUBLISH=1
-    else
-      PUBLISH=0
-    fi
-  else
-    PUBLISH=0
-  fi
-  log "Publish to GitHub: ${PUBLISH}"
+  PUBLISH=0
 fi
 
 mkdir -p "$OUT_DIR"
