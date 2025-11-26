@@ -17,6 +17,17 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-SetMe123}"
 INSTALL_DIR="/opt/glasspath"
 BIN_LINK="/usr/local/bin/glasspath"
 SERVICE="/etc/systemd/system/glasspath.service"
+ACTION="${ACTION:-install}"
+
+if [[ "$ACTION" == "uninstall" ]]; then
+  systemctl stop glasspath 2>/dev/null || true
+  systemctl disable glasspath 2>/dev/null || true
+  rm -f "$SERVICE" "$BIN_LINK"
+  rm -rf "$INSTALL_DIR"
+  systemctl daemon-reload
+  echo "Glasspath uninstalled and state reset."
+  exit 0
+fi
 
 RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" || true)"
 
