@@ -57,7 +57,6 @@ build_download_url() {
 download_release() {
   local url="$1"
   local out="$2"
-  log "Downloading ${url}"
   curl -fsSL "$url" -o "$out" || die "Failed to download release"
 }
 
