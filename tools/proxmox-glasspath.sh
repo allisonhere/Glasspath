@@ -18,6 +18,7 @@ INSTALL_DIR="/opt/glasspath"
 BIN_LINK="/usr/local/bin/glasspath"
 SERVICE="/etc/systemd/system/glasspath.service"
 ACTION="${ACTION:-install}"
+NONINTERACTIVE="${GLASSPATH_NONINTERACTIVE:-false}"
 
 if [[ "$ACTION" == "uninstall" ]]; then
   systemctl stop glasspath 2>/dev/null || true
@@ -27,6 +28,30 @@ if [[ "$ACTION" == "uninstall" ]]; then
   systemctl daemon-reload
   echo "Glasspath uninstalled and state reset."
   exit 0
+fi
+
+EXISTS=false
+if [[ -f "$SERVICE" || -x "$BIN_LINK" ]]; then
+  EXISTS=true
+fi
+
+if $EXISTS && [[ "$ACTION" == "install" ]] && [[ "$NONINTERACTIVE" != "true" ]] && [[ -t 0 ]]; then
+  echo "Glasspath appears to be installed."
+  read -r -p "Reinstall (r), Uninstall (u), or Cancel (c)? [r/u/c]: " choice
+  case "$choice" in
+    [Rr]*) ACTION="install" ;;
+    [Uu]*) ACTION="uninstall" ;;
+    *) echo "Cancelled."; exit 0 ;;
+  esac
+  if [[ "$ACTION" == "uninstall" ]]; then
+    systemctl stop glasspath 2>/dev/null || true
+    systemctl disable glasspath 2>/dev/null || true
+    rm -f "$SERVICE" "$BIN_LINK"
+    rm -rf "$INSTALL_DIR"
+    systemctl daemon-reload
+    echo "Glasspath uninstalled and state reset."
+    exit 0
+  fi
 fi
 
 RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" || true)"
