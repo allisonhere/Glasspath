@@ -18,8 +18,8 @@ esac
 if [[ "$VERSION" == "latest" ]]; then
   VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep -oP '"tag_name":\s*"\K[^"]+' || true)"
   if [[ -z "$VERSION" ]]; then
-    echo "Could not resolve latest version from GitHub releases." >&2
-    exit 1
+    echo "No releases found; falling back to source build (branch main)." >&2
+    VERSION="main"
   fi
 fi
 
