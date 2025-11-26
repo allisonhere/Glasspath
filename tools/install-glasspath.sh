@@ -11,6 +11,8 @@ DATA_DIR="${DATA_DIR:-/var/lib/glasspath}"
 CONFIG_DIR="${CONFIG_DIR:-/etc/glasspath}"
 BIN_PATH="${BIN_PATH:-${INSTALL_DIR}/glasspath}"
 LOG_FILE="${LOG_FILE:-/var/log/${SERVICE_NAME}.log}"
+SERVER_ADDRESS="${SERVER_ADDRESS:-0.0.0.0}"
+SERVER_PORT="${SERVER_PORT:-8080}"
 # Default to latest release unless explicitly pinned.
 DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
@@ -26,6 +28,21 @@ NC="\033[0m"
 
 log() { printf "[glasspath] %s\n" "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
+
+detect_host_ip() {
+  local ip
+  ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  if [[ -n "$ip" ]]; then
+    echo "$ip"
+    return
+  fi
+  ip="$(ip route get 1.1.1.1 2>/dev/null | awk '/src/ {print $7; exit}')"
+  if [[ -n "$ip" ]]; then
+    echo "$ip"
+    return
+  fi
+  echo "127.0.0.1"
+}
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "Missing dependency: $1"
@@ -98,7 +115,7 @@ After=network.target
 User=${SERVICE_USER}
 Group=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
-ExecStart=${BIN_PATH} --database ${DATA_DIR}/filebrowser.db --log ${LOG_FILE}
+ExecStart=${BIN_PATH} --database ${DATA_DIR}/filebrowser.db --log ${LOG_FILE} --address ${SERVER_ADDRESS} --port ${SERVER_PORT}
 Restart=on-failure
 RestartSec=3
 AmbientCapabilities=CAP_NET_BIND_SERVICE
@@ -196,7 +213,11 @@ do_install_flow() {
   systemctl start "$SERVICE_NAME"
   log "Done. Service status:"
   systemctl status "$SERVICE_NAME" --no-pager
-  printf "%b[glasspath]%b Visit: http://%s:%s\n" "$GREEN" "$NC" "${SERVER_ADDRESS:-127.0.0.1}" "${SERVER_PORT:-8080}"
+  local display_host="$SERVER_ADDRESS"
+  if [[ "$SERVER_ADDRESS" == "0.0.0.0" || "$SERVER_ADDRESS" == "" ]]; then
+    display_host="$(detect_host_ip)"
+  fi
+  printf "%b[glasspath]%b Visit: http://%s:%s\n" "$GREEN" "$NC" "$display_host" "$SERVER_PORT"
 }
 
 do_uninstall() {
