@@ -19,9 +19,20 @@ BIN_LINK="/usr/local/bin/glasspath"
 SERVICE="/etc/systemd/system/glasspath.service"
 
 RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" || true)"
-ASSET_URL="$(echo "$RELEASE_JSON" | grep -oP '"browser_download_url":\s*"\K[^"]+' | grep -m1 -E 'tar\.gz$' || true)"
-if [ -z "$ASSET_URL" ]; then
-  echo "Could not find a release tarball for ${REPO}. Check that assets exist." >&2
+
+if [[ -n "${GLASSPATH_URL:-}" ]]; then
+  ASSET_URL="$GLASSPATH_URL"
+else
+  if [[ -n "${GLASSPATH_ASSET:-}" ]]; then
+    ASSET_URL="$(echo "$RELEASE_JSON" | grep -oP '"browser_download_url":\s*"\K[^"]+' | grep -m1 "$GLASSPATH_ASSET" || true)"
+  fi
+  if [ -z "${ASSET_URL:-}" ]; then
+    ASSET_URL="$(echo "$RELEASE_JSON" | grep -oP '"browser_download_url":\s*"\K[^"]+' | grep -m1 -E 'tar\.gz$' || true)"
+  fi
+fi
+
+if [ -z "${ASSET_URL:-}" ]; then
+  echo "Could not find a release tarball for ${REPO}. Set GLASSPATH_URL to the asset URL or GLASSPATH_ASSET to a matching substring." >&2
   exit 1
 fi
 
@@ -29,7 +40,7 @@ systemctl stop glasspath 2>/dev/null || true
 rm -rf "$INSTALL_DIR" /tmp/gp.tar.gz "$SERVICE"
 
 mkdir -p "$INSTALL_DIR"
-curl -fL "$URL" -o /tmp/gp.tar.gz
+curl -fL "$ASSET_URL" -o /tmp/gp.tar.gz
 tar -C "$INSTALL_DIR" --strip-components=1 -xzf /tmp/gp.tar.gz || true
 
 BIN="$(find "$INSTALL_DIR" -type f \( -name glasspath -o -perm -111 \) | head -n1)"
