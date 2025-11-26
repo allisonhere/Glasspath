@@ -31,6 +31,7 @@ else
   TMP_DIR="$(mktemp -d "${TMP_DIR%/}"/glasspath.XXXXXX)"
 fi
 trap 'rm -rf "$TMP_DIR"' EXIT
+log "Using temp dir: $TMP_DIR"
 
 # Colors for nicer output
 GREEN="\033[0;32m"
@@ -219,10 +220,13 @@ choose_service_user() {
   default_user="${SERVICE_USER}"
   [[ -n "$existing_user" ]] && default_user="$existing_user"
 
-  choice="$(prompt_choice "Run service as which user? (default: ${default_user})" \
-    "${default_user}" \
-    "root" \
-    "custom")"
+  # Build options without duplicates
+  local opts=("${default_user}" "custom")
+  if [[ "$default_user" != "root" ]]; then
+    opts=("${default_user}" "root" "custom")
+  fi
+
+  choice="$(prompt_choice "Run service as which user? (default: ${default_user})" "${opts[@]}")"
 
   case "$choice" in
     "${default_user}")
