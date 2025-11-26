@@ -116,6 +116,37 @@ remove_service_unit() {
   systemctl daemon-reload || true
 }
 
+has_systemctl() {
+  command -v systemctl >/dev/null 2>&1
+}
+
+write_run_script() {
+  local script="/usr/local/bin/${SERVICE_NAME}-run"
+  cat <<EOF >"$script"
+#!/usr/bin/env bash
+set -euo pipefail
+CMD="${BIN_PATH} --database ${DATA_DIR}/filebrowser.db --log ${LOG_FILE} --address ${SERVER_ADDRESS} --port ${SERVER_PORT} --root ${SERVER_ROOT}"
+echo "[glasspath] starting: \$CMD"
+exec \$CMD
+EOF
+  chmod +x "$script"
+  log "Run script written to ${script}"
+}
+
+start_without_systemd() {
+  mkdir -p "$(dirname "$LOG_FILE")" /var/run
+  local pidfile="/var/run/${SERVICE_NAME}.pid"
+  if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+    log "Stopping existing ${SERVICE_NAME} (pid $(cat "$pidfile"))"
+    kill "$(cat "$pidfile")" 2>/dev/null || true
+    sleep 1
+  fi
+  log "Starting ${SERVICE_NAME} without systemd (logs: ${LOG_FILE})"
+  nohup "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${SERVER_PORT}" --root "${SERVER_ROOT}" >>"${LOG_FILE}" 2>&1 &
+  echo $! >"$pidfile"
+  log "PID: $(cat "$pidfile")"
+}
+
 write_service_unit() {
   cat <<EOF >"/etc/systemd/system/${SERVICE_NAME}.service"
 [Unit]
@@ -273,11 +304,19 @@ do_install_flow() {
   esac
 
   install_release "$tarball"
-  write_service_unit
-  log "Starting ${SERVICE_NAME}..."
-  systemctl start "$SERVICE_NAME"
-  log "Done. Service status:"
-  systemctl status "$SERVICE_NAME" --no-pager
+
+  if has_systemctl; then
+    write_service_unit
+    log "Starting ${SERVICE_NAME}..."
+    systemctl start "$SERVICE_NAME"
+    log "Done. Service status:"
+    systemctl status "$SERVICE_NAME" --no-pager
+  else
+    write_run_script
+    start_without_systemd
+    log "Started ${SERVICE_NAME} without systemd. To run in foreground: ${SERVICE_NAME}-run"
+  fi
+
   local display_host="$SERVER_ADDRESS"
   if [[ "$SERVER_ADDRESS" == "0.0.0.0" || "$SERVER_ADDRESS" == "" ]]; then
     display_host="$(detect_host_ip)"
@@ -296,7 +335,6 @@ do_uninstall() {
 main() {
   require_cmd curl
   require_cmd tar
-  require_cmd systemctl
   require_cmd uname
 
   local mode="fresh install"
