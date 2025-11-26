@@ -19,13 +19,14 @@ DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
 GLASSPATH_TARBALL_URL="${GLASSPATH_TARBALL_URL:-}"
 
+# Basic logging helpers
+log() { printf "[glasspath] %s\n" "$*" >&2; }
+die() { log "ERROR: $*"; exit 1; }
+
 # Colors for nicer output
 GREEN="\033[0;32m"
 YELLOW="\033[0;33m"
 NC="\033[0m"
-
-log() { printf "[glasspath] %s\n" "$*" >&2; }
-die() { log "ERROR: $*"; exit 1; }
 
 # Prepare temp dir (prefer /var/tmp for space if available)
 if [[ -w /var/tmp ]]; then
