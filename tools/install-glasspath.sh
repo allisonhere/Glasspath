@@ -16,7 +16,7 @@ SERVER_PORT="${SERVER_PORT:-8080}"
 SERVER_ROOT="${SERVER_ROOT:-/}"
 ADVERTISED_HOST=""
 ADVERTISED_PORT=""
-SERVER_PORT_FALLBACK="${SERVER_PORT_FALLBACK:-8081}"
+SERVER_PORT_FALLBACK="${SERVER_PORT_FALLBACK:-5436}"
 # Default to latest release unless explicitly pinned.
 DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
@@ -145,7 +145,21 @@ start_without_systemd() {
     sleep 1
   fi
   log "Starting ${SERVICE_NAME} without systemd (logs: ${LOG_FILE})"
-  nohup "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${SERVER_PORT}" --root "${SERVER_ROOT}" >>"${LOG_FILE}" 2>&1 &
+  local run_port="$SERVER_PORT"
+  nohup "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${run_port}" --root "${SERVER_ROOT}" >>"${LOG_FILE}" 2>&1 &
+  local pid=$!
+  sleep 1
+  if ! kill -0 "$pid" 2>/dev/null; then
+    log "Port ${run_port} unavailable; retrying with fallback ${SERVER_PORT_FALLBACK}"
+    nohup "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${SERVER_PORT_FALLBACK}" --root "${SERVER_ROOT}" >>"${LOG_FILE}" 2>&1 &
+    pid=$!
+    run_port="$SERVER_PORT_FALLBACK"
+    sleep 1
+    if ! kill -0 "$pid" 2>/dev/null; then
+      die "Failed to start ${SERVICE_NAME} on both ${SERVER_PORT} and ${SERVER_PORT_FALLBACK}"
+    fi
+    SERVER_PORT="$run_port"
+  fi
   echo $! >"$pidfile"
   log "PID: $(cat "$pidfile")"
 }
@@ -330,7 +344,7 @@ do_install_flow() {
   if [[ -n "$ADVERTISED_PORT" ]]; then
     display_port="$ADVERTISED_PORT"
   fi
-  printf "%b[glasspath]%b Visit: http://%s:%s\n" "$GREEN" "$NC" "$display_host" "$display_port"
+  printf "%b[glasspath]%b Visit: http://%s:%s (open this port in your firewall)\n" "$GREEN" "$NC" "$display_host" "$display_port"
 }
 
 do_uninstall() {
