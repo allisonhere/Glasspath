@@ -19,6 +19,11 @@ GLASSPATH_TARBALL_URL="${GLASSPATH_TARBALL_URL:-}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
+# Colors for nicer output
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+NC="\033[0m"
+
 log() { printf "[glasspath] %s\n" "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
@@ -121,7 +126,7 @@ install_release() {
   else
     mv "$tmp_extract"/* "$INSTALL_DIR"/
   fi
-  rmdir "$tmp_extract" || true
+  rm -rf "$tmp_extract"
 
   chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR" "$(dirname "$LOG_FILE")"
   chmod 0755 "$INSTALL_DIR" "$DATA_DIR"
@@ -191,6 +196,7 @@ do_install_flow() {
   systemctl start "$SERVICE_NAME"
   log "Done. Service status:"
   systemctl status "$SERVICE_NAME" --no-pager
+  printf "%b[glasspath]%b Visit: http://%s:%s\n" "$GREEN" "$NC" "${SERVER_ADDRESS:-127.0.0.1}" "${SERVER_PORT:-8080}"
 }
 
 do_uninstall() {
