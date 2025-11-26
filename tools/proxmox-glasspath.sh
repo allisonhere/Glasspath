@@ -131,6 +131,7 @@ if [[ -z "$ADMIN_PASSWORD" ]]; then
   ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)"
 fi
 "$INSTALL_DIR/glasspath" users update admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 || true
+echo -e "admin\n${ADMIN_PASSWORD}" > "${INSTALL_DIR}/admin_credentials.txt"
 
 cat >/etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
@@ -152,3 +153,4 @@ systemctl enable --now "$SERVICE_NAME"
 echo "Glasspath running on http://${ADDR}:${PORT}"
 echo "Admin user: admin"
 echo "Admin password: ${ADMIN_PASSWORD}"
+echo "Credentials saved to ${INSTALL_DIR}/admin_credentials.txt"

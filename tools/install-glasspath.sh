@@ -135,6 +135,7 @@ if [[ -z "$ADMIN_PASSWORD" ]]; then
   ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)"
 fi
 sudo "$INSTALL_DIR/glasspath" users update admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 || true
+echo -e "admin\n${ADMIN_PASSWORD}" | sudo tee "${INSTALL_DIR}/admin_credentials.txt" >/dev/null
 
 sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<EOF
 [Unit]
@@ -160,3 +161,4 @@ echo "Service: systemctl status ${SERVICE_NAME}"
 echo "URL: http://${ADDR}:${PORT}"
 echo "Admin user: admin"
 echo "Admin password: ${ADMIN_PASSWORD}"
+echo "Credentials saved to ${INSTALL_DIR}/admin_credentials.txt"
