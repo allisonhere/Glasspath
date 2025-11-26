@@ -391,9 +391,11 @@ const formatPerm = (mode: number) => {
 };
 
 const resolutionText = computed(() => {
-  const res = fileStore.req?.resolution;
-  if (!res) return "";
-  return `${res.width}×${res.height}`;
+  const res = (fileStore.req as any)?.resolution;
+  if (res && typeof res.width === "number" && typeof res.height === "number") {
+    return `${res.width}×${res.height}`;
+  }
+  return "";
 });
 
 const mediaDuration = computed(() => {
