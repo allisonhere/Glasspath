@@ -114,8 +114,16 @@ if ! curl -fL "$ASSET_URL" -o "/tmp/glasspath.tar.gz"; then
   exit 1
 fi
 
+rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 tar -C "$INSTALL_DIR" -xzf "/tmp/glasspath.tar.gz"
+BIN_PATH="$(find "$INSTALL_DIR" -type f -name glasspath | head -n1 || true)"
+if [[ -z "$BIN_PATH" ]]; then
+  echo "No glasspath binary found in archive." >&2
+  exit 1
+fi
+cp "$BIN_PATH" "$INSTALL_DIR/glasspath"
+chmod +x "$INSTALL_DIR/glasspath"
 ln -sf "$INSTALL_DIR/glasspath" "$BIN_LINK"
 
 cat >/etc/systemd/system/${SERVICE_NAME}.service <<EOF

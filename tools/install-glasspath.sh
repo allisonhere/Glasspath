@@ -92,8 +92,17 @@ install_from_release() {
   if ! curl -fL "$ASSET_URL" -o "/tmp/glasspath.tar.gz"; then
     return 1
   fi
+  sudo rm -rf "$INSTALL_DIR"
   sudo mkdir -p "$INSTALL_DIR"
   sudo tar -C "$INSTALL_DIR" -xzf "/tmp/glasspath.tar.gz"
+  local bin_path
+  bin_path="$(find "$INSTALL_DIR" -type f -name glasspath | head -n1 || true)"
+  if [[ -z "$bin_path" ]]; then
+    echo "No glasspath binary found in archive." >&2
+    return 1
+  fi
+  sudo cp "$bin_path" "$INSTALL_DIR/glasspath"
+  sudo chmod +x "$INSTALL_DIR/glasspath"
 }
 
 install_from_source() {
@@ -111,6 +120,7 @@ install_from_source() {
 
   sudo mkdir -p "$INSTALL_DIR"
   sudo cp "${SRC_DIR}/glasspath" "$INSTALL_DIR/"
+  sudo chmod +x "$INSTALL_DIR/glasspath"
 }
 
 if ! install_from_release; then
