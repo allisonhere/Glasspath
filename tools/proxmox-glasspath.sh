@@ -123,9 +123,13 @@ fi
 rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 tar -C "$INSTALL_DIR" -xzf "/tmp/glasspath.tar.gz"
-BIN_PATH="$(find "$INSTALL_DIR" -type f -name glasspath | head -n1 || true)"
+BIN_PATH="$(find "$INSTALL_DIR" -type f \( -name 'glasspath' -o -name 'glasspath*' \) | head -n1 || true)"
 if [[ -z "$BIN_PATH" ]]; then
-  echo "No glasspath binary found in archive." >&2
+  BIN_PATH="$(find "$INSTALL_DIR" -type f -perm -111 | head -n1 || true)"
+fi
+if [[ -z "$BIN_PATH" ]]; then
+  echo "No glasspath binary found in archive. Contents:" >&2
+  find "$INSTALL_DIR" -maxdepth 2 -type f >&2 || true
   exit 1
 fi
 cp "$BIN_PATH" "$INSTALL_DIR/glasspath"
