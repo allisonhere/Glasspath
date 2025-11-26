@@ -13,7 +13,7 @@ ADDR="$(ip route get 1.1.1.1 2>/dev/null | awk '/src/ {for(i=1;i<=NF;i++) if($i=
 [ -z "$ADDR" ] && ADDR="$(hostname -I | awk '{print $1}')"
 [ -z "$ADDR" ] && ADDR="0.0.0.0"
 PORT="${PORT:-8080}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-SetMe123}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-ChangeMeNow123!}"
 INSTALL_DIR="/opt/glasspath"
 BIN_LINK="/usr/local/bin/glasspath"
 SERVICE="/etc/systemd/system/glasspath.service"
