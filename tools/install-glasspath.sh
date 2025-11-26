@@ -107,9 +107,21 @@ EOF
 
 install_release() {
   local tarball="$1"
+  local arch_dir
 
   mkdir -p "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR" "$(dirname "$LOG_FILE")"
-  tar -xzf "$tarball" -C "$INSTALL_DIR"
+
+  # Extract into temp, then move contents to INSTALL_DIR root.
+  tmp_extract="$(mktemp -d)"
+  tar -xzf "$tarball" -C "$tmp_extract"
+  # If tarball has a single top-level dir, descend into it.
+  first_entry="$(ls -1 "$tmp_extract" | head -1)"
+  if [[ -d "$tmp_extract/$first_entry" ]]; then
+    mv "$tmp_extract/$first_entry"/* "$INSTALL_DIR"/
+  else
+    mv "$tmp_extract"/* "$INSTALL_DIR"/
+  fi
+  rmdir "$tmp_extract" || true
 
   chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR" "$(dirname "$LOG_FILE")"
   chmod 0755 "$INSTALL_DIR" "$DATA_DIR"
