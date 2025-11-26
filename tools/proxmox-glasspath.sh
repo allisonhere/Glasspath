@@ -157,7 +157,7 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl enable --now "$SERVICE_NAME"
+systemctl enable --now "$SERVICE_NAME" || true
 
 echo "Glasspath running on http://${ADDR}:${PORT}"
 echo "Admin user: admin"

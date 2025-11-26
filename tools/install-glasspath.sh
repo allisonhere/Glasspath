@@ -154,7 +154,7 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable --now "${SERVICE_NAME}"
+sudo systemctl enable --now "${SERVICE_NAME}" || true
 
 echo "Glasspath installed."
 echo "Service: systemctl status ${SERVICE_NAME}"
