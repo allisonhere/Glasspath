@@ -17,6 +17,16 @@ Production build:
 - `pnpm run build` in `frontend/` to emit assets into `frontend/dist/`
 - Build the Go binary: `go build -o filebrowser`
 
+## One-line install (LXC/VM)
+
+Assuming you publish release tarballs (see `tools/build-release.sh`), install/start via systemd:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/allisonhere/Glasspath/master/tools/install-glasspath.sh)"
+```
+
+Options: `PORT=8080 ADDR=0.0.0.0 GLASSPATH_VERSION=v1.0.0` before the command to override defaults. Artifacts should be named `glasspath_<version>_linux_<arch>.tar.gz` (amd64/arm64).
+
 ## Notes
 
 - Themes: Light, Dawn, Dark, Noir, Glassmorphism, Pro (dense). Use Settings → Branding or the command palette (Ctrl/Cmd+K) to switch.
