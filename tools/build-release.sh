@@ -5,30 +5,71 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 VERSION="${GLASSPATH_VERSION:-}"
-if [[ -z "$VERSION" ]]; then
-  if git describe --tags --abbrev=0 >/dev/null 2>&1; then
-    VERSION="$(git describe --tags --abbrev=0)"
-    echo "Using latest tag: ${VERSION}"
-  else
-    VERSION="$(date +%Y.%m.%d)"
-    echo "No tags found; using date-based version: ${VERSION}"
-  fi
-fi
-
+AUTO_BUMP_PATCH="${AUTO_BUMP_PATCH:-0}"   # set to 1 to auto-increment patch if tag exists remotely
 ARCHES="${GLASSPATH_ARCHES:-amd64 arm64}"
 OUT_DIR="${ROOT}/release"
 PUBLISH="${PUBLISH:-0}"      # set to 1 to create/update GitHub release with assets
 PUSH_TAG="${PUSH_TAG:-0}"    # set to 1 to git push the release tag
 GH_REPO="${GH_REPO:-}"
+ALLOW_EXISTING_TAG="${ALLOW_EXISTING_TAG:-1}" # if tag exists remotely and PUSH_TAG=1, skip push and continue
 
-echo "Version: ${VERSION}"
-echo "Arches: ${ARCHES}"
-echo "Publish to GitHub: ${PUBLISH}"
-echo "Push tag: ${PUSH_TAG}"
+# Colors for nicer output
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+RED="\033[0;31m"
+NC="\033[0m"
+
+log()  { printf "%b[release]%b %s\n" "$YELLOW" "$NC" "$*" >&2; }
+good() { printf "%b[release]%b %s\n" "$GREEN" "$NC" "$*" >&2; }
+bad()  { printf "%b[release]%b %s\n" "$RED" "$NC" "$*" >&2; }
+
+pick_version() {
+  local base_ver="$1"
+  local ver="$base_ver"
+
+  if [[ -z "$ver" ]]; then
+    if git describe --tags --abbrev=0 >/dev/null 2>&1; then
+      ver="$(git describe --tags --abbrev=0)"
+      log "Using latest tag: ${ver}"
+    else
+      ver="$(date +%Y.%m.%d)"
+      log "No tags found; using date-based version: ${ver}"
+    fi
+  fi
+
+  if [[ "$AUTO_BUMP_PATCH" != "1" ]]; then
+    echo "$ver"
+    return
+  fi
+
+  # Auto-increment patch if tag exists on remote origin.
+  while git ls-remote --tags origin "refs/tags/${ver}" >/dev/null 2>&1; do
+    if [[ "$ver" =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+      local major="${BASH_REMATCH[1]}"
+      local minor="${BASH_REMATCH[2]}"
+      local patch="${BASH_REMATCH[3]}"
+      patch=$((patch + 1))
+      ver="v${major}.${minor}.${patch}"
+      log "Tag exists remotely; auto-bumped to ${ver}"
+    else
+      bad "Cannot auto-bump version '${ver}' (not semantic)."
+      break
+    fi
+  done
+
+  echo "$ver"
+}
+
+VERSION="$(pick_version "$VERSION")"
+
+log "Version: ${VERSION}"
+log "Arches: ${ARCHES}"
+log "Publish to GitHub: ${PUBLISH}"
+log "Push tag: ${PUSH_TAG}"
 
 mkdir -p "$OUT_DIR"
 
-echo "Building frontend assets..."
+log "Building frontend assets..."
 (
   cd "${ROOT}/frontend"
   pnpm install --frozen-lockfile || pnpm install
@@ -36,7 +77,7 @@ echo "Building frontend assets..."
 )
 
 for arch in $ARCHES; do
-  echo "Building binary for linux/${arch}..."
+  log "Building binary for linux/${arch}..."
   BUILD_ROOT="${OUT_DIR}/glasspath_${VERSION}_linux_${arch}"
   rm -rf "$BUILD_ROOT"
   mkdir -p "$BUILD_ROOT"
@@ -51,18 +92,18 @@ for arch in $ARCHES; do
     tar -czf "$TARBALL" "glasspath_${VERSION}_linux_${arch}"
   )
 
-  echo "Created ${OUT_DIR}/${TARBALL}"
+  good "Created ${OUT_DIR}/${TARBALL}"
 done
 
-echo "Done. Release artifacts in ${OUT_DIR}"
+good "Done. Release artifacts in ${OUT_DIR}"
 
 if [[ "$PUBLISH" != "1" ]]; then
-  echo "PUBLISH=1 not set; skipping GitHub release upload."
+  log "PUBLISH=1 not set; skipping GitHub release upload."
   exit 0
 fi
 
 if ! command -v gh >/dev/null 2>&1; then
-  echo "PUBLISH=1 but GitHub CLI 'gh' not found. Install gh or set PUBLISH=0."
+  bad "PUBLISH=1 but GitHub CLI 'gh' not found. Install gh or set PUBLISH=0."
   exit 1
 fi
 
@@ -70,7 +111,7 @@ fi
 if [[ -z "$GH_REPO" ]]; then
   origin_url="$(git config --get remote.origin.url || true)"
   if [[ -z "$origin_url" ]]; then
-    echo "Unable to determine remote.origin.url; set GH_REPO=owner/repo."
+    bad "Unable to determine remote.origin.url; set GH_REPO=owner/repo."
     exit 1
   fi
   GH_REPO="${origin_url##*:}"
@@ -82,20 +123,27 @@ if [[ -z "$GH_REPO" ]]; then
   GH_REPO="${GH_REPO%.git}"
 fi
 
-echo "Using GH_REPO=$GH_REPO"
+log "Using GH_REPO=$GH_REPO"
 
 # Ensure tag exists locally; create annotated tag if missing.
 if git rev-parse "refs/tags/${VERSION}" >/dev/null 2>&1; then
-  echo "Tag ${VERSION} already exists locally."
+  log "Tag ${VERSION} already exists locally."
 else
   git tag -a "$VERSION" -m "Release $VERSION"
-  echo "Created tag ${VERSION}."
+  good "Created tag ${VERSION}."
 fi
 
 # Optionally push tag.
 if [[ "$PUSH_TAG" == "1" ]]; then
-  echo "Pushing tag ${VERSION} to origin..."
-  git push origin "$VERSION"
+  log "Pushing tag ${VERSION} to origin..."
+  if ! git push origin "$VERSION"; then
+    if [[ "$ALLOW_EXISTING_TAG" == "1" ]]; then
+      log "Tag ${VERSION} already exists remotely; skipping push and continuing."
+    else
+      bad "Failed to push tag ${VERSION} to origin."
+      exit 1
+    fi
+  fi
 fi
 
 ASSETS=()
@@ -105,14 +153,14 @@ done
 
 # Create or update GitHub release and upload assets.
 if gh release view "$VERSION" --repo "$GH_REPO" >/dev/null 2>&1; then
-  echo "Release ${VERSION} exists; uploading assets (may overwrite)."
+  log "Release ${VERSION} exists; uploading assets (will clobber)."
   gh release upload "$VERSION" "${ASSETS[@]}" --clobber --repo "$GH_REPO"
 else
-  echo "Creating release ${VERSION} on GitHub..."
+  log "Creating release ${VERSION} on GitHub..."
   gh release create "$VERSION" "${ASSETS[@]}" \
     --title "$VERSION" \
     --notes "Release $VERSION" \
     --repo "$GH_REPO"
 fi
 
-echo "Publish complete."
+good "Publish complete."
