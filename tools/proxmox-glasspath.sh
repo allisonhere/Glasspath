@@ -140,7 +140,8 @@ ln -sf "$INSTALL_DIR/glasspath" "$BIN_LINK"
 if [[ -z "$ADMIN_PASSWORD" ]]; then
   ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)"
 fi
-"$INSTALL_DIR/glasspath" users update admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 || true
+"$INSTALL_DIR/glasspath" users update admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 || \
+  "$INSTALL_DIR/glasspath" users add admin --password "$ADMIN_PASSWORD" --perm.admin --scope "/" >/dev/null 2>&1 || true
 echo -e "admin\n${ADMIN_PASSWORD}" > "${INSTALL_DIR}/admin_credentials.txt"
 
 cat >/etc/systemd/system/${SERVICE_NAME}.service <<EOF
