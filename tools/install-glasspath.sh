@@ -9,7 +9,7 @@ SERVICE_USER="${SERVICE_USER:-glasspath}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/glasspath}"
 DATA_DIR="${DATA_DIR:-/var/lib/glasspath}"
 CONFIG_DIR="${CONFIG_DIR:-/etc/glasspath}"
-BIN_PATH="${BIN_PATH:-${INSTALL_DIR}/filebrowser}"
+BIN_PATH="${BIN_PATH:-${INSTALL_DIR}/glasspath}"
 LOG_FILE="${LOG_FILE:-/var/log/${SERVICE_NAME}.log}"
 # Default to latest release unless explicitly pinned.
 DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
