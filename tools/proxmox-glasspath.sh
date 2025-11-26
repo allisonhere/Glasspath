@@ -61,10 +61,17 @@ BIN_LINK="/usr/local/bin/glasspath"
 SERVICE_NAME="glasspath"
 PORT="${PORT:-8080}"
 if [[ -z "${ADDR:-}" ]]; then
-  ADDR="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  ADDR="$(ip route get 1.1.1.1 2>/dev/null | awk '/src/ {for(i=1;i<=NF;i++) if($i=="src"){print $(i+1); exit}}')"
+  [[ -z "$ADDR" ]] && ADDR="$(hostname -I 2>/dev/null | awk '{print $1}')"
   [[ -z "$ADDR" ]] && ADDR="0.0.0.0"
 fi
 ACTION="${ACTION:-install}"
+NONINTERACTIVE="${GLASSPATH_NONINTERACTIVE:-false}"
+
+EXISTS=false
+if [[ -f "/etc/systemd/system/${SERVICE_NAME}.service" || -x "$BIN_LINK" ]]; then
+  EXISTS=true
+fi
 
 if [[ "$ACTION" == "uninstall" ]]; then
   systemctl stop "$SERVICE_NAME" 2>/dev/null || true
@@ -75,6 +82,30 @@ if [[ "$ACTION" == "uninstall" ]]; then
   rm -rf "$INSTALL_DIR"
   echo "Glasspath uninstalled."
   exit 0
+fi
+
+if $EXISTS && [[ "$ACTION" == "install" ]] && [[ "$NONINTERACTIVE" != "true" ]] && [[ -t 0 ]]; then
+  echo "Glasspath appears to be installed."
+  read -r -p "Reinstall (r), Uninstall (u), or Cancel (c)? [r/u/c]: " choice
+  case "$choice" in
+    [Rr]*) ACTION="install" ;;
+    [Uu]*) ACTION="uninstall" ;;
+    *) echo "Cancelled."; exit 0 ;;
+  esac
+  if [[ "$ACTION" == "uninstall" ]]; then
+    systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+    systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+    rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
+    systemctl daemon-reload
+    rm -f "$BIN_LINK"
+    rm -rf "$INSTALL_DIR"
+    echo "Glasspath uninstalled."
+    exit 0
+  fi
+fi
+
+if $EXISTS && [[ "$ACTION" == "install" ]]; then
+  systemctl stop "$SERVICE_NAME" 2>/dev/null || true
 fi
 
 echo "Downloading ${ASSET_URL} ..."
