@@ -60,7 +60,10 @@ INSTALL_DIR="/opt/glasspath"
 BIN_LINK="/usr/local/bin/glasspath"
 SERVICE_NAME="glasspath"
 PORT="${PORT:-8080}"
-ADDR="${ADDR:-0.0.0.0}"
+if [[ -z "${ADDR:-}" ]]; then
+  ADDR="$(hostname -I 2>/dev/null | awk '{print $1}')"
+  [[ -z "$ADDR" ]] && ADDR="0.0.0.0"
+fi
 ACTION="${ACTION:-install}"
 
 if [[ "$ACTION" == "uninstall" ]]; then
