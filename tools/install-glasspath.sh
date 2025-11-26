@@ -19,6 +19,14 @@ DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
 GLASSPATH_TARBALL_URL="${GLASSPATH_TARBALL_URL:-}"
 
+# Colors for nicer output
+GREEN="\033[0;32m"
+YELLOW="\033[0;33m"
+NC="\033[0m"
+
+log() { printf "[glasspath] %s\n" "$*" >&2; }
+die() { log "ERROR: $*"; exit 1; }
+
 # Prepare temp dir (prefer /var/tmp for space if available)
 if [[ -w /var/tmp ]]; then
   TMP_DIR="$(mktemp -d /var/tmp/glasspath.XXXXXX)"
@@ -27,14 +35,6 @@ else
 fi
 trap 'rm -rf "$TMP_DIR"' EXIT
 log "Using temp dir: $TMP_DIR"
-
-# Colors for nicer output
-GREEN="\033[0;32m"
-YELLOW="\033[0;33m"
-NC="\033[0m"
-
-log() { printf "[glasspath] %s\n" "$*" >&2; }
-die() { log "ERROR: $*"; exit 1; }
 
 detect_host_ip() {
   local ip
