@@ -71,6 +71,7 @@ BIN_LINK="/usr/local/bin/glasspath"
 SERVICE_NAME="glasspath"
 PORT="${PORT:-8080}"
 ADDR="${ADDR:-0.0.0.0}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 if [[ "$ACTION" == "uninstall" ]]; then
   echo "Stopping ${SERVICE_NAME}..."
@@ -129,6 +130,12 @@ fi
 
 sudo ln -sf "$INSTALL_DIR/glasspath" "$BIN_LINK"
 
+# set admin password (create a random one if not provided)
+if [[ -z "$ADMIN_PASSWORD" ]]; then
+  ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)"
+fi
+sudo "$INSTALL_DIR/glasspath" users update admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 || true
+
 sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<EOF
 [Unit]
 Description=Glasspath file manager
@@ -151,3 +158,5 @@ sudo systemctl enable --now "${SERVICE_NAME}"
 echo "Glasspath installed."
 echo "Service: systemctl status ${SERVICE_NAME}"
 echo "URL: http://${ADDR}:${PORT}"
+echo "Admin user: admin"
+echo "Admin password: ${ADMIN_PASSWORD}"

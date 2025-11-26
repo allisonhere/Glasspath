@@ -67,6 +67,7 @@ if [[ -z "${ADDR:-}" ]]; then
 fi
 ACTION="${ACTION:-install}"
 NONINTERACTIVE="${GLASSPATH_NONINTERACTIVE:-false}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
 EXISTS=false
 if [[ -f "/etc/systemd/system/${SERVICE_NAME}.service" || -x "$BIN_LINK" ]]; then
