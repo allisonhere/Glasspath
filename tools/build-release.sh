@@ -67,6 +67,8 @@ log "Arches: ${ARCHES}"
 log "Publish to GitHub: ${PUBLISH}"
 log "Push tag: ${PUSH_TAG}"
 
+TAR_VERSION="${VERSION#v}"
+
 # Interactive publish prompt when allowed.
 if [[ "$PUBLISH" == "ask" ]]; then
   if [[ -t 0 && "${CI:-}" != "true" ]]; then
@@ -93,7 +95,7 @@ log "Building frontend assets..."
 
 for arch in $ARCHES; do
   log "Building binary for linux/${arch}..."
-  BUILD_ROOT="${OUT_DIR}/glasspath_${VERSION}_linux_${arch}"
+  BUILD_ROOT="${OUT_DIR}/glasspath_${TAR_VERSION}_linux_${arch}"
   rm -rf "$BUILD_ROOT"
   mkdir -p "$BUILD_ROOT"
 
@@ -101,10 +103,10 @@ for arch in $ARCHES; do
 
   cp README.md LICENSE "${BUILD_ROOT}" 2>/dev/null || true
 
-  TARBALL="glasspath_${VERSION}_linux_${arch}.tar.gz"
+  TARBALL="glasspath_${TAR_VERSION}_linux_${arch}.tar.gz"
   (
     cd "$OUT_DIR"
-    tar -czf "$TARBALL" "glasspath_${VERSION}_linux_${arch}"
+    tar -czf "$TARBALL" "glasspath_${TAR_VERSION}_linux_${arch}"
   )
 
   good "Created ${OUT_DIR}/${TARBALL}"
@@ -174,7 +176,7 @@ fi
 
 ASSETS=()
 for arch in $ARCHES; do
-  ASSETS+=("${OUT_DIR}/glasspath_${VERSION}_linux_${arch}.tar.gz")
+  ASSETS+=("${OUT_DIR}/glasspath_${TAR_VERSION}_linux_${arch}.tar.gz")
 done
 
 # Create or update GitHub release and upload assets.
