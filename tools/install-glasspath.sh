@@ -13,6 +13,7 @@ BIN_PATH="${BIN_PATH:-${INSTALL_DIR}/glasspath}"
 LOG_FILE="${LOG_FILE:-/var/log/${SERVICE_NAME}.log}"
 SERVER_ADDRESS="${SERVER_ADDRESS:-0.0.0.0}"
 SERVER_PORT="${SERVER_PORT:-8080}"
+SERVER_ROOT="${SERVER_ROOT:-/}"
 # Default to latest release unless explicitly pinned.
 DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
@@ -115,7 +116,7 @@ After=network.target
 User=${SERVICE_USER}
 Group=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
-ExecStart=${BIN_PATH} --database ${DATA_DIR}/filebrowser.db --log ${LOG_FILE} --address ${SERVER_ADDRESS} --port ${SERVER_PORT}
+ExecStart=${BIN_PATH} --database ${DATA_DIR}/filebrowser.db --log ${LOG_FILE} --address ${SERVER_ADDRESS} --port ${SERVER_PORT} --root ${SERVER_ROOT}
 Restart=on-failure
 RestartSec=3
 AmbientCapabilities=CAP_NET_BIND_SERVICE
