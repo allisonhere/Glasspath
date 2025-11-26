@@ -200,6 +200,45 @@ current_unit_user() {
   fi
 }
 
+choose_service_user() {
+  # Non-interactive: keep existing setting.
+  if [[ ! -t 0 ]]; then
+    return
+  fi
+
+  local existing_user default_user choice
+  existing_user="$(current_unit_user)"
+  default_user="${SERVICE_USER}"
+  [[ -n "$existing_user" ]] && default_user="$existing_user"
+
+  choice="$(prompt_choice "Run service as which user? (default: ${default_user})" \
+    "${default_user}" \
+    "root" \
+    "custom")"
+
+  case "$choice" in
+    "${default_user}")
+      SERVICE_USER="$default_user"
+      ;;
+    "root")
+      SERVICE_USER="root"
+      ;;
+    "custom")
+      read -rp "Enter service user: " input_user
+      if [[ -n "$input_user" ]]; then
+        SERVICE_USER="$input_user"
+      else
+        SERVICE_USER="$default_user"
+      fi
+      ;;
+    *)
+      SERVICE_USER="$default_user"
+      ;;
+  esac
+
+  log "Service will run as: ${SERVICE_USER}"
+}
+
 do_install_flow() {
   local mode="$1"
   local url tarball
@@ -273,19 +312,8 @@ main() {
     log "No existing installation detected; proceeding with fresh install."
   fi
 
-  if [[ -t 0 ]]; then
-    local existing_user
-    existing_user="$(current_unit_user)"
-    local default_user="${SERVICE_USER}"
-    [[ -n "$existing_user" ]] && default_user="$existing_user"
-    read -rp "Service user to run as [${default_user}]: " input_user
-    if [[ -n "$input_user" ]]; then
-      SERVICE_USER="$input_user"
-    else
-      SERVICE_USER="$default_user"
-    fi
-    BIN_PATH="${INSTALL_DIR}/glasspath"
-  fi
+  choose_service_user
+  BIN_PATH="${INSTALL_DIR}/glasspath"
 
   do_install_flow "$mode"
 }
