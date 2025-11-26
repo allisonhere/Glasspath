@@ -121,33 +121,33 @@ prompt_choice() {
   local prompt="$1"; shift
   local options=("$@")
   local choice
-  echo "$prompt"
+  printf "%s\n" "$prompt" >&2
   local i=1
   for opt in "${options[@]}"; do
-    echo "  [$i] $opt"
+    printf "  [%s] %s\n" "$i" "$opt" >&2
     i=$((i+1))
   done
   # If stdin is not a TTY (e.g., piped), default to first option.
   if [[ ! -t 0 ]]; then
-    echo "${options[0]}"
+    printf "%s\n" "${options[0]}"
     return 0
   fi
   read -rp "> " choice
   # Default to first option on empty input.
   if [[ -z "$choice" ]]; then
-    echo "${options[0]}"
+    printf "%s\n" "${options[0]}"
     return 0
   fi
   if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
-    echo "invalid"
+    printf "invalid\n"
     return 0
   fi
   local idx=$((choice-1))
   if (( idx < 0 || idx >= ${#options[@]} )); then
-    echo "invalid"
+    printf "invalid\n"
     return 0
   fi
-  echo "${options[$idx]}"
+  printf "%s\n" "${options[$idx]}"
 }
 
 do_install_flow() {
@@ -214,6 +214,8 @@ main() {
       "uninstall") do_uninstall; exit 0 ;;
       *) log "Invalid selection, aborting."; exit 1 ;;
     esac
+  else
+    log "No existing installation detected; proceeding with fresh install."
   fi
 
   do_install_flow "$mode"
