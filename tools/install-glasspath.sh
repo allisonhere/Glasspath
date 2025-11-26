@@ -1,171 +1,207 @@
 #!/usr/bin/env bash
+# Installer for Glasspath (File Browser fork) on Debian/Ubuntu LXCs.
+# Supports fresh install, clean reinstall, in-place reinstall, and uninstall.
+
 set -euo pipefail
 
-REPO="allisonhere/Glasspath"
-VERSION="${GLASSPATH_VERSION:-latest}"
-ARCH="$(uname -m)"
-ACTION="${ACTION:-install}"
+SERVICE_NAME="${SERVICE_NAME:-glasspath}"
+SERVICE_USER="${SERVICE_USER:-glasspath}"
+INSTALL_DIR="${INSTALL_DIR:-/opt/glasspath}"
+DATA_DIR="${DATA_DIR:-/var/lib/glasspath}"
+CONFIG_DIR="${CONFIG_DIR:-/etc/glasspath}"
+BIN_PATH="${BIN_PATH:-${INSTALL_DIR}/filebrowser}"
+LOG_FILE="${LOG_FILE:-/var/log/${SERVICE_NAME}.log}"
+# Default to latest release unless explicitly pinned.
+DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
+GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
+GLASSPATH_TARBALL_URL="${GLASSPATH_TARBALL_URL:-}"
 
-case "$ARCH" in
-  x86_64|amd64) ARCH="amd64" ;;
-  aarch64|arm64) ARCH="arm64" ;;
-  *)
-    echo "Unsupported architecture: $(uname -m)" >&2
-    exit 1
-    ;;
-esac
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
-fetch_release_json() {
-  local tag="$1"
-  local json=""
-  if [[ "$tag" == "latest" ]]; then
-    json="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" || true)"
-  else
-    json="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${tag}" || true)"
-    if [[ -z "$json" && "$tag" == v* ]]; then
-      json="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${tag#v}" || true)"
-    fi
-  fi
-  echo "$json"
+log() { printf "[glasspath] %s\n" "$*"; }
+die() { log "ERROR: $*"; exit 1; }
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "Missing dependency: $1"
 }
 
-pick_asset_url() {
-  local json="$1" arch="$2" preferred="$3"
-  local urls=()
-  mapfile -t urls < <(echo "$json" | grep -oP '"browser_download_url":\s*"\K[^"]+')
-
-  if [[ -n "$preferred" ]]; then
-    for u in "${urls[@]}"; do
-      if [[ "$u" == *"$preferred"* ]]; then
-        echo "$u"; return
-      fi
-    done
-  fi
-
-  for u in "${urls[@]}"; do
-    if [[ "$u" == *.tar.gz ]]; then
-      echo "$u"; return
-    fi
-  done
-
-  [[ ${#urls[@]} -gt 0 ]] && echo "${urls[0]}"
+detect_arch() {
+  local arch
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64) echo "amd64" ;;
+    aarch64|arm64) echo "arm64" ;;
+    *) die "Unsupported architecture: $arch" ;;
+  esac
 }
 
-release_json="$(fetch_release_json "$VERSION")"
+build_download_url() {
+  local arch tar_version
+  arch="$(detect_arch)"
+  tar_version="$GLASSPATH_VERSION"
 
-if [[ "$VERSION" == "latest" && -z "$release_json" ]]; then
-  echo "No releases found; falling back to source build (branch main)." >&2
-  VERSION="main"
-fi
-
-ASSET_URL=""
-if [[ -n "$release_json" ]]; then
-  ASSET_URL="$(pick_asset_url "$release_json" "$ARCH" "${GLASSPATH_ASSET:-}")"
-  if [[ -z "$ASSET_URL" ]]; then
-    ASSET_URL="$(echo "$release_json" | grep -oP '"browser_download_url":\s*"\K[^"]+' | head -n1)"
+  if [[ -n "$GLASSPATH_TARBALL_URL" ]]; then
+    echo "$GLASSPATH_TARBALL_URL"
+    return
   fi
-fi
 
-INSTALL_DIR="/opt/glasspath"
-BIN_LINK="/usr/local/bin/glasspath"
-SERVICE_NAME="glasspath"
-PORT="${PORT:-8080}"
-ADDR="${ADDR:-0.0.0.0}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-ChangeMeNow123!}"
+  if [[ "$tar_version" == "latest" ]]; then
+    log "Fetching latest release tag from GitHub..."
+    tar_version="$(curl -fsSL https://api.github.com/repos/allisonhere/Glasspath/releases/latest | awk -F '\"' '/tag_name/ {print $4; exit}')"
+    [[ -z "$tar_version" ]] && die "Could not determine latest release tag"
+  fi
 
-if [[ "$ACTION" == "uninstall" ]]; then
-  echo "Stopping ${SERVICE_NAME}..."
-  sudo systemctl stop "${SERVICE_NAME}" 2>/dev/null || true
-  sudo systemctl disable "${SERVICE_NAME}" 2>/dev/null || true
-  sudo rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
-  sudo systemctl daemon-reload
-  sudo rm -f "$BIN_LINK"
-  sudo rm -rf "$INSTALL_DIR"
-  echo "Glasspath uninstalled."
-  exit 0
-fi
-
-install_from_release() {
-  echo "Attempting to download ${ASSET_URL} ..."
-  if [[ -z "$ASSET_URL" ]]; then
-    return 1
-  fi
-  if ! curl -fL "$ASSET_URL" -o "/tmp/glasspath.tar.gz"; then
-    return 1
-  fi
-sudo rm -rf "$INSTALL_DIR"
-sudo mkdir -p "$INSTALL_DIR"
-sudo tar -C "$INSTALL_DIR" --strip-components=1 -xzf "/tmp/glasspath.tar.gz" || true
-local bin_path
-if [[ ! -x "$INSTALL_DIR/glasspath" ]]; then
-  bin_path="$(find "$INSTALL_DIR" -type f \( -name glasspath -o -perm -111 \) | head -n1 || true)"
-  if [[ -n "$bin_path" ]]; then
-    sudo cp "$bin_path" "$INSTALL_DIR/glasspath"
-    sudo chmod +x "$INSTALL_DIR/glasspath"
-  fi
-fi
-bin_path="$INSTALL_DIR/glasspath"
-if [[ ! -x "$bin_path" ]]; then
-  echo "No glasspath binary found in archive. Contents:" >&2
-  find "$INSTALL_DIR" -maxdepth 3 -type f >&2 || true
-  return 1
-fi
+  echo "https://github.com/allisonhere/Glasspath/releases/download/${tar_version}/glasspath_${tar_version#v}_linux_${arch}.tar.gz"
 }
 
-install_from_source() {
-  echo "Release not found; building from source (requires git, go>=1.25, node>=20, pnpm)..."
-  command -v git >/dev/null || { echo "git not found"; exit 1; }
-  command -v go >/dev/null || { echo "go not found"; exit 1; }
-  command -v pnpm >/dev/null || { echo "pnpm not found"; exit 1; }
-
-  SRC_DIR="$(mktemp -d)"
-  git clone --depth 1 --branch "${VERSION#v}" "https://github.com/${REPO}.git" "$SRC_DIR" 2>/dev/null || \
-    git clone --depth 1 "https://github.com/${REPO}.git" "$SRC_DIR"
-
-  (cd "$SRC_DIR/frontend" && pnpm install && pnpm run build)
-  (cd "$SRC_DIR" && CGO_ENABLED=0 go build -o "${SRC_DIR}/glasspath" .)
-
-  sudo mkdir -p "$INSTALL_DIR"
-  sudo cp "${SRC_DIR}/glasspath" "$INSTALL_DIR/"
-  sudo chmod +x "$INSTALL_DIR/glasspath"
+download_release() {
+  local url="$1"
+  local out="$2"
+  log "Downloading ${url}"
+  curl -fsSL "$url" -o "$out" || die "Failed to download release"
 }
 
-if ! install_from_release; then
-  install_from_source
-fi
+ensure_user() {
+  if id "$SERVICE_USER" >/dev/null 2>&1; then
+    return
+  fi
+  log "Creating service user ${SERVICE_USER}"
+  useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+}
 
-sudo ln -sf "$INSTALL_DIR/glasspath" "$BIN_LINK"
+stop_service() {
+  if systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null || systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+    systemctl stop "$SERVICE_NAME" || true
+  fi
+}
 
-# set admin password (create a random one if not provided)
-if [[ -z "$ADMIN_PASSWORD" ]]; then
-  ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)"
-fi
-sudo "$INSTALL_DIR/glasspath" users update admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 || \
-  sudo "$INSTALL_DIR/glasspath" users add admin --password "$ADMIN_PASSWORD" --perm.admin --scope "/" >/dev/null 2>&1 || true
-echo -e "admin\n${ADMIN_PASSWORD}" | sudo tee "${INSTALL_DIR}/admin_credentials.txt" >/dev/null
+disable_service() {
+  systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+}
 
-sudo tee "/etc/systemd/system/${SERVICE_NAME}.service" >/dev/null <<EOF
+remove_service_unit() {
+  rm -f "/etc/systemd/system/${SERVICE_NAME}.service"
+  systemctl daemon-reload || true
+}
+
+write_service_unit() {
+  cat <<EOF >"/etc/systemd/system/${SERVICE_NAME}.service"
 [Unit]
-Description=Glasspath file manager
+Description=Glasspath File Browser
 After=network.target
 
 [Service]
-Type=simple
-ExecStart=${BIN_LINK} --address ${ADDR} --port ${PORT}
+User=${SERVICE_USER}
+Group=${SERVICE_USER}
 WorkingDirectory=${INSTALL_DIR}
+ExecStart=${BIN_PATH} --database ${DATA_DIR}/filebrowser.db --log ${LOG_FILE}
 Restart=on-failure
-Environment=HOME=${INSTALL_DIR}
+RestartSec=3
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
 EOF
+  systemctl daemon-reload
+  systemctl enable "${SERVICE_NAME}"
+}
 
-sudo systemctl daemon-reload
-sudo systemctl enable --now "${SERVICE_NAME}" || true
+install_release() {
+  local tarball="$1"
 
-echo "Glasspath installed."
-echo "Service: systemctl status ${SERVICE_NAME}"
-echo "URL: http://${ADDR}:${PORT}"
-echo "Admin user: admin"
-echo "Admin password: ${ADMIN_PASSWORD}"
-echo "Credentials saved to ${INSTALL_DIR}/admin_credentials.txt"
+  mkdir -p "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR" "$(dirname "$LOG_FILE")"
+  tar -xzf "$tarball" -C "$INSTALL_DIR"
+
+  chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR" "$(dirname "$LOG_FILE")"
+  chmod 0755 "$INSTALL_DIR" "$DATA_DIR"
+}
+
+prompt_choice() {
+  local prompt="$1"; shift
+  local options=("$@")
+  local choice
+  echo "$prompt"
+  local i=1
+  for opt in "${options[@]}"; do
+    echo "  [$i] $opt"
+    i=$((i+1))
+  done
+  read -rp "> " choice
+  if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+    echo ""
+    return 0
+  fi
+  echo "${options[$((choice-1))]}"
+}
+
+do_install_flow() {
+  local mode="$1"
+  local url tarball
+  url="$(build_download_url)"
+  tarball="${TMP_DIR}/glasspath.tar.gz"
+
+  download_release "$url" "$tarball"
+  ensure_user
+
+  case "$mode" in
+    "clean reinstall")
+      stop_service
+      rm -rf "$INSTALL_DIR" "$DATA_DIR"
+      ;;
+    "reinstall over existing")
+      stop_service
+      ;;
+    "fresh install")
+      stop_service
+      ;;
+    *)
+      die "Unknown mode: $mode"
+      ;;
+  esac
+
+  install_release "$tarball"
+  write_service_unit
+  log "Starting ${SERVICE_NAME}..."
+  systemctl start "$SERVICE_NAME"
+  log "Done. Service status:"
+  systemctl status "$SERVICE_NAME" --no-pager
+}
+
+do_uninstall() {
+  stop_service
+  disable_service
+  remove_service_unit
+  rm -rf "$INSTALL_DIR" "$CONFIG_DIR" "$DATA_DIR" "$LOG_FILE"
+  log "Uninstalled ${SERVICE_NAME}."
+}
+
+main() {
+  require_cmd curl
+  require_cmd tar
+  require_cmd systemctl
+  require_cmd uname
+
+  local mode="fresh install"
+
+  if [[ -x "$BIN_PATH" || -f "/etc/systemd/system/${SERVICE_NAME}.service" ]]; then
+    local choice
+    choice="$(prompt_choice "Existing installation detected. Choose an option:" \
+      "cancel" \
+      "reinstall over existing" \
+      "clean reinstall (wipe app + data)" \
+      "uninstall")"
+
+    case "$choice" in
+      "cancel") log "Cancelled."; exit 0 ;;
+      "reinstall over existing") mode="reinstall over existing" ;;
+      "clean reinstall (wipe app + data)") mode="clean reinstall" ;;
+      "uninstall") do_uninstall; exit 0 ;;
+      *) log "Invalid selection, aborting."; exit 1 ;;
+    esac
+  fi
+
+  do_install_flow "$mode"
+}
+
+main "$@"

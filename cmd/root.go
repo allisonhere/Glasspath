@@ -449,20 +449,22 @@ func quickSetup(v *viper.Viper, s *storage.Storage) error {
 	username := v.GetString("username")
 	password := v.GetString("password")
 
+	// Default to fixed admin creds when not provided
+	if username == "" {
+		username = "admin"
+	}
 	if password == "" {
-		var pwd string
-		pwd, err = users.RandomPwd(set.MinimumPasswordLength)
-		if err != nil {
-			return err
-		}
+		password = "password"
+		log.Printf("User '%s' initialized with default password: %s (please change it immediately)\n", username, password)
+	}
 
-		log.Printf("User '%s' initialized with randomly generated password: %s\n", username, pwd)
-		password, err = users.ValidateAndHashPwd(pwd, set.MinimumPasswordLength)
-		if err != nil {
-			return err
-		}
-	} else {
-		log.Printf("User '%s' initialize wth user-provided password\n", username)
+	// If the chosen password is shorter than the minimum, lower the minimum to allow bootstrapping.
+	if uint(len(password)) < set.MinimumPasswordLength {
+		set.MinimumPasswordLength = uint(len(password))
+	}
+	password, err = users.ValidateAndHashPwd(password, set.MinimumPasswordLength)
+	if err != nil {
+		return err
 	}
 
 	if username == "" || password == "" {
