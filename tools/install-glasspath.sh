@@ -14,6 +14,8 @@ LOG_FILE="${LOG_FILE:-/var/log/${SERVICE_NAME}.log}"
 SERVER_ADDRESS="${SERVER_ADDRESS:-0.0.0.0}"
 SERVER_PORT="${SERVER_PORT:-8080}"
 SERVER_ROOT="${SERVER_ROOT:-/}"
+ADVERTISED_HOST=""
+ADVERTISED_PORT=""
 # Default to latest release unless explicitly pinned.
 DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
@@ -318,10 +320,16 @@ do_install_flow() {
   fi
 
   local display_host="$SERVER_ADDRESS"
-  if [[ "$SERVER_ADDRESS" == "0.0.0.0" || "$SERVER_ADDRESS" == "" ]]; then
+  local display_port="$SERVER_PORT"
+  if [[ -n "$ADVERTISED_HOST" ]]; then
+    display_host="$ADVERTISED_HOST"
+  elif [[ "$SERVER_ADDRESS" == "0.0.0.0" || "$SERVER_ADDRESS" == "" ]]; then
     display_host="$(detect_host_ip)"
   fi
-  printf "%b[glasspath]%b Visit: http://%s:%s\n" "$GREEN" "$NC" "$display_host" "$SERVER_PORT"
+  if [[ -n "$ADVERTISED_PORT" ]]; then
+    display_port="$ADVERTISED_PORT"
+  fi
+  printf "%b[glasspath]%b Visit: http://%s:%s\n" "$GREEN" "$NC" "$display_host" "$display_port"
 }
 
 do_uninstall() {
@@ -359,6 +367,16 @@ main() {
   fi
 
   choose_service_user
+
+  if ! has_systemctl && [[ -t 0 ]]; then
+    read -rp "Advertised host for URL (e.g., Docker host IP) []: " input_host
+    ADVERTISED_HOST="$input_host"
+    read -rp "Advertised port for URL [${SERVER_PORT}]: " input_port
+    if [[ -n "$input_port" ]]; then
+      ADVERTISED_PORT="$input_port"
+    fi
+  fi
+
   BIN_PATH="${INSTALL_DIR}/glasspath"
 
   # Confirm install (TTY only).
