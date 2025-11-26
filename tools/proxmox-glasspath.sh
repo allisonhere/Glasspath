@@ -11,11 +11,11 @@ case "$ARCH" in
 esac
 
 if [[ "$VERSION" == "latest" ]]; then
-  RELEASE_JSON="$(curl -fsSL https://api.github.com/repos/${REPO}/releases/latest || true)"
+  RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" || true)"
 else
-  RELEASE_JSON="$(curl -fsSL https://api.github.com/repos/${REPO}/releases/tags/${VERSION} || true)"
+  RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${VERSION}" || true)"
   if [[ -z "$RELEASE_JSON" && "$VERSION" == v* ]]; then
-    RELEASE_JSON="$(curl -fsSL https://api.github.com/repos/${REPO}/releases/tags/${VERSION#v}" || true)"
+    RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${VERSION#v}" || true)"
   fi
 fi
 
