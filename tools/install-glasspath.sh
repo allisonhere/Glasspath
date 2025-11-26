@@ -19,16 +19,11 @@ DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
 GLASSPATH_TARBALL_URL="${GLASSPATH_TARBALL_URL:-}"
 
-# Prepare temp dir (prefer /var/tmp for space if available, allow override via TMP_DIR)
-if [[ -z "${TMP_DIR:-}" ]]; then
-  if [[ -w /var/tmp ]]; then
-    TMP_DIR="$(mktemp -d /var/tmp/glasspath.XXXXXX)"
-  else
-    TMP_DIR="$(mktemp -d)"
-  fi
+# Prepare temp dir (prefer /var/tmp for space if available)
+if [[ -w /var/tmp ]]; then
+  TMP_DIR="$(mktemp -d /var/tmp/glasspath.XXXXXX)"
 else
-  mkdir -p "$TMP_DIR"
-  TMP_DIR="$(mktemp -d "${TMP_DIR%/}"/glasspath.XXXXXX)"
+  TMP_DIR="$(mktemp -d)"
 fi
 trap 'rm -rf "$TMP_DIR"' EXIT
 log "Using temp dir: $TMP_DIR"
