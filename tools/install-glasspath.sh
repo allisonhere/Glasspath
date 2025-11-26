@@ -30,13 +30,25 @@ fetch_release_json() {
 }
 
 pick_asset_url() {
-  local json="$1" arch="$2"
-  local pattern=""
-  case "$arch" in
-    amd64) pattern='(linux.*amd64|amd64.*linux|linux.*x86_64|x86_64.*linux)' ;;
-    arm64) pattern='(linux.*arm64|arm64.*linux|linux.*aarch64|aarch64.*linux)' ;;
-  esac
-  echo "$json" | grep -oP '"browser_download_url":\s*"\K[^"]+' | grep -Ei "$pattern" | head -n1
+  local json="$1" arch="$2" preferred="$3"
+  local urls=()
+  mapfile -t urls < <(echo "$json" | grep -oP '"browser_download_url":\s*"\K[^"]+')
+
+  if [[ -n "$preferred" ]]; then
+    for u in "${urls[@]}"; do
+      if [[ "$u" == *"$preferred"* ]]; then
+        echo "$u"; return
+      fi
+    done
+  fi
+
+  for u in "${urls[@]}"; do
+    if [[ "$u" == *.tar.gz ]]; then
+      echo "$u"; return
+    fi
+  done
+
+  [[ ${#urls[@]} -gt 0 ]] && echo "${urls[0]}"
 }
 
 release_json="$(fetch_release_json "$VERSION")"
@@ -48,7 +60,7 @@ fi
 
 ASSET_URL=""
 if [[ -n "$release_json" ]]; then
-  ASSET_URL="$(pick_asset_url "$release_json" "$ARCH")"
+  ASSET_URL="$(pick_asset_url "$release_json" "$ARCH" "${GLASSPATH_ASSET:-}")"
   if [[ -z "$ASSET_URL" ]]; then
     ASSET_URL="$(echo "$release_json" | grep -oP '"browser_download_url":\s*"\K[^"]+' | head -n1)"
   fi
