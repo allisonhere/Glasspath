@@ -33,6 +33,14 @@ func newCommand(service string, title string, args ...string) tea.Cmd {
 	}
 }
 
+func bold(s string) string {
+	return "\033[1m" + s + "\033[0m"
+}
+
+func dim(s string) string {
+	return "\033[2m" + s + "\033[0m"
+}
+
 func initialCmd(service string) tea.Cmd {
 	return newCommand(service, fmt.Sprintf("Status (%s)", service), "systemctl", "status", service, "--no-pager")
 }
@@ -66,9 +74,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	help := "Commands: s=status • r=restart • l=logs • q=quit"
-	border := strings.Repeat("─", 50)
-	return fmt.Sprintf("Glasspath TUI (service: %s)\n%s\n%s\n%s\n", m.service, border, help, m.log)
+	title := bold(fmt.Sprintf("Glasspath TUI (service: %s)", m.service))
+	help := dim("Keys: s=status • r=restart • l=logs • q=quit")
+	border := strings.Repeat("─", 60)
+	body := m.log
+	if strings.TrimSpace(body) == "" {
+		body = dim("Waiting... press s for status, r to restart, l for logs.")
+	}
+	return fmt.Sprintf("%s\n%s\n%s\n\n%s\n", title, border, help, body)
 }
 
 func newTUICmd() *cobra.Command {
