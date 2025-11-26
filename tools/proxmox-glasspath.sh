@@ -127,6 +127,11 @@ cp "$BIN_PATH" "$INSTALL_DIR/glasspath"
 chmod +x "$INSTALL_DIR/glasspath"
 ln -sf "$INSTALL_DIR/glasspath" "$BIN_LINK"
 
+if [[ -z "$ADMIN_PASSWORD" ]]; then
+  ADMIN_PASSWORD="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 16)"
+fi
+"$INSTALL_DIR/glasspath" users update admin --password "$ADMIN_PASSWORD" >/dev/null 2>&1 || true
+
 cat >/etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
 Description=Glasspath file manager
@@ -145,3 +150,5 @@ systemctl daemon-reload
 systemctl enable --now "$SERVICE_NAME"
 
 echo "Glasspath running on http://${ADDR}:${PORT}"
+echo "Admin user: admin"
+echo "Admin password: ${ADMIN_PASSWORD}"
