@@ -69,6 +69,11 @@ ACTION="${ACTION:-install}"
 NONINTERACTIVE="${GLASSPATH_NONINTERACTIVE:-false}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 
+# auto-disable prompts when no TTY
+if [[ ! -t 0 ]]; then
+  NONINTERACTIVE=true
+fi
+
 EXISTS=false
 if [[ -f "/etc/systemd/system/${SERVICE_NAME}.service" || -x "$BIN_LINK" ]]; then
   EXISTS=true
