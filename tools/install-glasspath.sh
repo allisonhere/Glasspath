@@ -47,7 +47,6 @@ build_download_url() {
   fi
 
   if [[ "$tar_version" == "latest" ]]; then
-    log "Fetching latest release tag from GitHub..."
     tar_version="$(curl -fsSL https://api.github.com/repos/allisonhere/Glasspath/releases/latest | awk -F '\"' '/tag_name/ {print $4; exit}')"
     [[ -z "$tar_version" ]] && die "Could not determine latest release tag"
   fi
