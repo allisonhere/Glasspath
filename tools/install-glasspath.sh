@@ -19,7 +19,7 @@ GLASSPATH_TARBALL_URL="${GLASSPATH_TARBALL_URL:-}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-log() { printf "[glasspath] %s\n" "$*"; }
+log() { printf "[glasspath] %s\n" "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
 require_cmd() {
