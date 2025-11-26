@@ -123,6 +123,17 @@ has_systemctl() {
   command -v systemctl >/dev/null 2>&1
 }
 
+port_available() {
+  local port="$1"
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltn "sport = :$port" | grep -q LISTEN && return 1 || return 0
+  elif command -v netstat >/dev/null 2>&1; then
+    netstat -tln 2>/dev/null | awk '{print $4}' | grep -E ":$port$" >/dev/null && return 1 || return 0
+  else
+    return 0
+  fi
+}
+
 write_run_script() {
   local script="/usr/local/bin/${SERVICE_NAME}-run"
   cat <<EOF >"$script"
@@ -393,6 +404,25 @@ main() {
   fi
 
   BIN_PATH="${INSTALL_DIR}/glasspath"
+
+  # Check port availability; if taken, suggest fallback and prompt for override
+  if [[ -t 0 ]]; then
+    if ! port_available "$SERVER_PORT"; then
+      log "Port ${SERVER_PORT} appears to be in use."
+      read -rp "Use fallback port ${SERVER_PORT_FALLBACK}? [Y/n]: " ans_port
+      if [[ "$ans_port" =~ ^[Nn] ]]; then
+        read -rp "Enter port to use [${SERVER_PORT_FALLBACK}]: " input_port
+        if [[ -n "$input_port" ]]; then
+          SERVER_PORT="$input_port"
+        else
+          SERVER_PORT="$SERVER_PORT_FALLBACK"
+        fi
+      else
+        SERVER_PORT="$SERVER_PORT_FALLBACK"
+      fi
+      log "Using port: ${SERVER_PORT}"
+    fi
+  fi
 
   # Confirm install (TTY only).
   if [[ -t 0 ]]; then
