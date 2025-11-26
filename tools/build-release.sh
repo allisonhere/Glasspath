@@ -8,7 +8,7 @@ VERSION="${GLASSPATH_VERSION:-}"
 AUTO_BUMP_PATCH="${AUTO_BUMP_PATCH:-0}"   # set to 1 to auto-increment patch if tag exists remotely
 ARCHES="${GLASSPATH_ARCHES:-amd64 arm64}"
 OUT_DIR="${ROOT}/release"
-PUBLISH="${PUBLISH:-0}"      # set to 1 to create/update GitHub release with assets
+PUBLISH="${PUBLISH:-ask}"    # set to 1 to create/update GitHub release with assets; 'ask' prompts if TTY
 PUSH_TAG="${PUSH_TAG:-0}"    # set to 1 to git push the release tag
 GH_REPO="${GH_REPO:-}"
 ALLOW_EXISTING_TAG="${ALLOW_EXISTING_TAG:-1}" # if tag exists remotely and PUSH_TAG=1, skip push and continue
@@ -67,6 +67,21 @@ log "Arches: ${ARCHES}"
 log "Publish to GitHub: ${PUBLISH}"
 log "Push tag: ${PUSH_TAG}"
 
+# Interactive publish prompt when allowed.
+if [[ "$PUBLISH" == "ask" ]]; then
+  if [[ -t 0 && "${CI:-}" != "true" ]]; then
+    read -rp "Publish to GitHub after build? [y/N]: " ans
+    if [[ "$ans" =~ ^[Yy] ]]; then
+      PUBLISH=1
+    else
+      PUBLISH=0
+    fi
+  else
+    PUBLISH=0
+  fi
+  log "Publish to GitHub: ${PUBLISH}"
+fi
+
 mkdir -p "$OUT_DIR"
 
 log "Building frontend assets..."
@@ -107,6 +122,12 @@ if ! command -v gh >/dev/null 2>&1; then
   exit 1
 fi
 
+# Verify auth
+if ! gh auth status --hostname github.com >/dev/null 2>&1; then
+  bad "GitHub CLI is not authenticated. Please run 'gh auth login' (GitHub.com, HTTPS) or set GH_TOKEN, then re-run this script."
+  exit 1
+fi
+
 # Determine GH_REPO if not provided (expects remote origin to be ssh/https URL).
 if [[ -z "$GH_REPO" ]]; then
   origin_url="$(git config --get remote.origin.url || true)"
@@ -114,11 +135,16 @@ if [[ -z "$GH_REPO" ]]; then
     bad "Unable to determine remote.origin.url; set GH_REPO=owner/repo."
     exit 1
   fi
-  GH_REPO="${origin_url##*:}"
-  GH_REPO="${GH_REPO##*/}"
-  # handle https://github.com/owner/repo(.git)
-  if [[ "$origin_url" == https://github.com/* ]]; then
-    GH_REPO="${origin_url#https://github.com/}"
+  # Handle ssh URL: git@github.com:owner/repo.git
+  if [[ "$origin_url" =~ ^git@[^:]+:([^/]+/[^/]+)(\.git)?$ ]]; then
+    GH_REPO="${BASH_REMATCH[1]}"
+  # Handle https URL: https://github.com/owner/repo(.git)
+  elif [[ "$origin_url" =~ ^https://github.com/([^/]+/[^/]+)(\.git)?$ ]]; then
+    GH_REPO="${BASH_REMATCH[1]}"
+  else
+    # Fallback: strip protocol/ending heuristically
+    GH_REPO="${origin_url##*:}"
+    GH_REPO="${GH_REPO##*/}"
   fi
   GH_REPO="${GH_REPO%.git}"
 fi
@@ -154,13 +180,19 @@ done
 # Create or update GitHub release and upload assets.
 if gh release view "$VERSION" --repo "$GH_REPO" >/dev/null 2>&1; then
   log "Release ${VERSION} exists; uploading assets (will clobber)."
-  gh release upload "$VERSION" "${ASSETS[@]}" --clobber --repo "$GH_REPO"
+  if ! gh release upload "$VERSION" "${ASSETS[@]}" --clobber --repo "$GH_REPO"; then
+    bad "Failed to upload assets to existing release ${VERSION}."
+    exit 1
+  fi
 else
   log "Creating release ${VERSION} on GitHub..."
-  gh release create "$VERSION" "${ASSETS[@]}" \
+  if ! gh release create "$VERSION" "${ASSETS[@]}" \
     --title "$VERSION" \
     --notes "Release $VERSION" \
-    --repo "$GH_REPO"
+    --repo "$GH_REPO"; then
+    bad "Failed to create release ${VERSION}."
+    exit 1
+  fi
 fi
 
 good "Publish complete."
