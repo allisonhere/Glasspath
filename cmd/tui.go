@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -66,7 +67,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	help := "Commands: s=status • r=restart • l=logs • q=quit"
-	return fmt.Sprintf("Glasspath TUI (service: %s)\n%s\n\n%s\n", m.service, help, m.log)
+	border := strings.Repeat("─", 50)
+	return fmt.Sprintf("Glasspath TUI (service: %s)\n%s\n%s\n%s\n", m.service, border, help, m.log)
 }
 
 func newTUICmd() *cobra.Command {
