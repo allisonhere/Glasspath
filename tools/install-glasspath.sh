@@ -15,16 +15,44 @@ case "$ARCH" in
     ;;
 esac
 
-if [[ "$VERSION" == "latest" ]]; then
-  VERSION="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep -oP '"tag_name":\s*"\K[^"]+' || true)"
-  if [[ -z "$VERSION" ]]; then
-    echo "No releases found; falling back to source build (branch main)." >&2
-    VERSION="main"
+fetch_release_json() {
+  local tag="$1"
+  local json=""
+  if [[ "$tag" == "latest" ]]; then
+    json="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" || true)"
+  else
+    json="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${tag}" || true)"
+    if [[ -z "$json" && "$tag" == v* ]]; then
+      json="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/tags/${tag#v}" || true)"
+    fi
   fi
+  echo "$json"
+}
+
+pick_asset_url() {
+  local json="$1" arch="$2"
+  local pattern=""
+  case "$arch" in
+    amd64) pattern='(linux.*amd64|amd64.*linux|linux.*x86_64|x86_64.*linux)' ;;
+    arm64) pattern='(linux.*arm64|arm64.*linux|linux.*aarch64|aarch64.*linux)' ;;
+  esac
+  echo "$json" | grep -oP '"browser_download_url":\s*"\K[^"]+' | grep -Ei "$pattern" | head -n1
+}
+
+release_json="$(fetch_release_json "$VERSION")"
+
+if [[ "$VERSION" == "latest" && -z "$release_json" ]]; then
+  echo "No releases found; falling back to source build (branch main)." >&2
+  VERSION="main"
 fi
 
-TARBALL="glasspath_${VERSION}_linux_${ARCH}.tar.gz"
-URL="https://github.com/${REPO}/releases/download/${VERSION}/${TARBALL}"
+ASSET_URL=""
+if [[ -n "$release_json" ]]; then
+  ASSET_URL="$(pick_asset_url "$release_json" "$ARCH")"
+  if [[ -z "$ASSET_URL" ]]; then
+    ASSET_URL="$(echo "$release_json" | grep -oP '"browser_download_url":\s*"\K[^"]+' | head -n1)"
+  fi
+fi
 
 INSTALL_DIR="/opt/glasspath"
 BIN_LINK="/usr/local/bin/glasspath"
@@ -45,12 +73,15 @@ if [[ "$ACTION" == "uninstall" ]]; then
 fi
 
 install_from_release() {
-  echo "Attempting to download ${URL} ..."
-  if ! curl -fL "$URL" -o "/tmp/${TARBALL}"; then
+  echo "Attempting to download ${ASSET_URL} ..."
+  if [[ -z "$ASSET_URL" ]]; then
+    return 1
+  fi
+  if ! curl -fL "$ASSET_URL" -o "/tmp/glasspath.tar.gz"; then
     return 1
   fi
   sudo mkdir -p "$INSTALL_DIR"
-  sudo tar -C "$INSTALL_DIR" -xzf "/tmp/${TARBALL}"
+  sudo tar -C "$INSTALL_DIR" -xzf "/tmp/glasspath.tar.gz"
 }
 
 install_from_source() {

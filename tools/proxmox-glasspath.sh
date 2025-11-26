@@ -11,15 +11,33 @@ case "$ARCH" in
 esac
 
 if [[ "$VERSION" == "latest" ]]; then
-  VERSION="$(curl -fsSL https://api.github.com/repos/${REPO}/releases/latest | grep -oP '"tag_name":\s*"\K[^"]+' || true)"
-  if [[ -z "$VERSION" ]]; then
-    echo "No releases found for ${REPO}; publish a tarball or set GLASSPATH_VERSION." >&2
-    exit 1
+  RELEASE_JSON="$(curl -fsSL https://api.github.com/repos/${REPO}/releases/latest || true)"
+else
+  RELEASE_JSON="$(curl -fsSL https://api.github.com/repos/${REPO}/releases/tags/${VERSION} || true)"
+  if [[ -z "$RELEASE_JSON" && "$VERSION" == v* ]]; then
+    RELEASE_JSON="$(curl -fsSL https://api.github.com/repos/${REPO}/releases/tags/${VERSION#v}" || true)"
   fi
 fi
 
-TARBALL="glasspath_${VERSION}_linux_${ARCH}.tar.gz"
-URL="https://github.com/${REPO}/releases/download/${VERSION}/${TARBALL}"
+if [[ -z "$RELEASE_JSON" ]]; then
+  echo "No releases found for ${REPO}; publish a tarball or set GLASSPATH_VERSION." >&2
+  exit 1
+fi
+
+if [[ "$VERSION" == "latest" ]]; then
+  VERSION="$(echo "$RELEASE_JSON" | grep -oP '"tag_name":\s*"\K[^"]+' | head -n1)"
+fi
+
+ASSET_URL=$(echo "$RELEASE_JSON" | grep -oP '"browser_download_url":\s*"\K[^"]+' | \
+  grep -Ei "$( [[ "$ARCH" == "amd64" ]] && echo '(linux.*amd64|amd64.*linux|linux.*x86_64|x86_64.*linux)' || echo '(linux.*arm64|arm64.*linux|linux.*aarch64|aarch64.*linux)' )" | head -n1)
+if [[ -z "$ASSET_URL" ]]; then
+  ASSET_URL=$(echo "$RELEASE_JSON" | grep -oP '"browser_download_url":\s*"\K[^"]+' | head -n1)
+fi
+if [[ -z "$ASSET_URL" ]]; then
+  echo "No suitable release asset found for arch ${ARCH}." >&2
+  exit 1
+fi
+
 INSTALL_DIR="/opt/glasspath"
 BIN_LINK="/usr/local/bin/glasspath"
 SERVICE_NAME="glasspath"
@@ -39,13 +57,13 @@ if [[ "$ACTION" == "uninstall" ]]; then
 fi
 
 echo "Downloading ${URL} ..."
-if ! curl -fL "$URL" -o "/tmp/${TARBALL}"; then
-  echo "Failed to download ${URL}. Ensure release asset exists." >&2
+if ! curl -fL "$ASSET_URL" -o "/tmp/glasspath.tar.gz"; then
+  echo "Failed to download ${ASSET_URL}. Ensure release asset exists." >&2
   exit 1
 fi
 
 mkdir -p "$INSTALL_DIR"
-tar -C "$INSTALL_DIR" -xzf "/tmp/${TARBALL}"
+tar -C "$INSTALL_DIR" -xzf "/tmp/glasspath.tar.gz"
 ln -sf "$INSTALL_DIR/glasspath" "$BIN_LINK"
 
 cat >/etc/systemd/system/${SERVICE_NAME}.service <<EOF
