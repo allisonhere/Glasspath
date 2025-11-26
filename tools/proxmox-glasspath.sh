@@ -2,7 +2,6 @@
 set -euo pipefail
 
 REPO="allisonhere/Glasspath"
-VERSION="${GLASSPATH_VERSION:-v1.0.0}"
 ARCH="$(uname -m)"
 case "$ARCH" in
   x86_64|amd64) ARCH="amd64" ;;
@@ -18,7 +17,13 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-SetMe123}"
 INSTALL_DIR="/opt/glasspath"
 BIN_LINK="/usr/local/bin/glasspath"
 SERVICE="/etc/systemd/system/glasspath.service"
-URL="https://github.com/${REPO}/releases/download/${VERSION}/glasspath_${VERSION}_linux_${ARCH}.tar.gz"
+
+RELEASE_JSON="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" || true)"
+ASSET_URL="$(echo "$RELEASE_JSON" | grep -oP '"browser_download_url":\s*"\K[^"]+' | grep -m1 -E 'tar\.gz$' || true)"
+if [ -z "$ASSET_URL" ]; then
+  echo "Could not find a release tarball for ${REPO}. Check that assets exist." >&2
+  exit 1
+fi
 
 systemctl stop glasspath 2>/dev/null || true
 rm -rf "$INSTALL_DIR" /tmp/gp.tar.gz "$SERVICE"
