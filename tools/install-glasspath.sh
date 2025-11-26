@@ -91,6 +91,9 @@ download_release() {
   local url="$1"
   local out="$2"
   curl -fsSL "$url" -o "$out" || die "Failed to download release"
+  if [[ ! -s "$out" ]]; then
+    die "Downloaded release is empty: $out"
+  fi
 }
 
 ensure_user() {
@@ -155,6 +158,11 @@ install_release() {
     mv "$tmp_extract"/* "$INSTALL_DIR"/
   fi
   rm -rf "$tmp_extract"
+
+  # sanity check
+  if [[ ! -x "${INSTALL_DIR}/glasspath" ]]; then
+    die "Binary not found after extraction at ${INSTALL_DIR}/glasspath"
+  fi
 
   chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR" "$DATA_DIR" "$CONFIG_DIR" "$(dirname "$LOG_FILE")"
   chmod 0755 "$INSTALL_DIR" "$DATA_DIR"
@@ -314,6 +322,15 @@ main() {
 
   choose_service_user
   BIN_PATH="${INSTALL_DIR}/glasspath"
+
+  # Confirm install (TTY only).
+  if [[ -t 0 ]]; then
+    read -rp "Proceed with install? [Y/n]: " confirm
+    if [[ "$confirm" =~ ^[Nn] ]]; then
+      log "Cancelled by user."
+      exit 0
+    fi
+  fi
 
   do_install_flow "$mode"
 }
