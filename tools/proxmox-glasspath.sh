@@ -122,18 +122,19 @@ fi
 
 rm -rf "$INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
-tar -C "$INSTALL_DIR" -xzf "/tmp/glasspath.tar.gz"
-BIN_PATH="$(find "$INSTALL_DIR" -type f \( -name 'glasspath' -o -name 'glasspath*' \) | head -n1 || true)"
-if [[ -z "$BIN_PATH" ]]; then
-  BIN_PATH="$(find "$INSTALL_DIR" -type f -perm -111 | head -n1 || true)"
+tar -C "$INSTALL_DIR" --strip-components=1 -xzf "/tmp/glasspath.tar.gz" || true
+if [[ ! -x "$INSTALL_DIR/glasspath" ]]; then
+  BIN_PATH="$(find "$INSTALL_DIR" -type f \( -name 'glasspath' -o -perm -111 \) | head -n1 || true)"
+  if [[ -n "$BIN_PATH" ]]; then
+    cp "$BIN_PATH" "$INSTALL_DIR/glasspath"
+    chmod +x "$INSTALL_DIR/glasspath"
+  fi
 fi
-if [[ -z "$BIN_PATH" ]]; then
+if [[ ! -x "$INSTALL_DIR/glasspath" ]]; then
   echo "No glasspath binary found in archive. Contents:" >&2
-  find "$INSTALL_DIR" -maxdepth 2 -type f >&2 || true
+  find "$INSTALL_DIR" -maxdepth 3 -type f >&2 || true
   exit 1
 fi
-cp "$BIN_PATH" "$INSTALL_DIR/glasspath"
-chmod +x "$INSTALL_DIR/glasspath"
 ln -sf "$INSTALL_DIR/glasspath" "$BIN_LINK"
 
 if [[ -z "$ADMIN_PASSWORD" ]]; then
