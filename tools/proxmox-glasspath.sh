@@ -67,7 +67,7 @@ if [[ -z "${ADDR:-}" ]]; then
 fi
 ACTION="${ACTION:-install}"
 NONINTERACTIVE="${GLASSPATH_NONINTERACTIVE:-false}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-SetMe123}"
 
 # auto-disable prompts when no TTY
 if [[ ! -t 0 ]]; then

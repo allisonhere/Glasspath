@@ -71,7 +71,7 @@ BIN_LINK="/usr/local/bin/glasspath"
 SERVICE_NAME="glasspath"
 PORT="${PORT:-8080}"
 ADDR="${ADDR:-0.0.0.0}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-SetMe123}"
 
 if [[ "$ACTION" == "uninstall" ]]; then
   echo "Stopping ${SERVICE_NAME}..."
