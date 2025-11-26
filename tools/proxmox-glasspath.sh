@@ -56,7 +56,7 @@ if [[ "$ACTION" == "uninstall" ]]; then
   exit 0
 fi
 
-echo "Downloading ${URL} ..."
+echo "Downloading ${ASSET_URL} ..."
 if ! curl -fL "$ASSET_URL" -o "/tmp/glasspath.tar.gz"; then
   echo "Failed to download ${ASSET_URL}. Ensure release asset exists." >&2
   exit 1
