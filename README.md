@@ -17,6 +17,23 @@ Production build:
 - `pnpm run build` in `frontend/` to emit assets into `frontend/dist/`
 - Build the Go binary: `go build -o filebrowser`
 
+## Docker install with the script
+
+The installer can run inside a minimal Docker container (no systemd). Example:
+
+```bash
+docker run --rm -it -p 8080:8080 debian:12 bash -lc "\
+  apt-get update && apt-get install -y curl ca-certificates tar && \
+  GLASSPATH_NO_SYSTEMD=1 GLASSPATH_START_MODE=foreground SERVER_ADDRESS=0.0.0.0 SERVER_PORT=8080 \
+  bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/allisonhere/Glasspath/master/tools/install-glasspath.sh)\""
+```
+
+Notes:
+- `GLASSPATH_NO_SYSTEMD=1` skips service user creation/systemd and runs directly.
+- `GLASSPATH_START_MODE=foreground` keeps the process as PID 1 so the container stays alive (use `background` for nohup).
+- Override `SERVER_ADDRESS`/`SERVER_PORT` and optionally `ADVERTISED_HOST`/`ADVERTISED_PORT` to match your published port mapping.
+- Logs: `/var/log/glasspath.log`.
+
 ## One-line install (LXC/VM)
 
 Assuming you publish release tarballs (see `tools/build-release.sh`), install/start via systemd:

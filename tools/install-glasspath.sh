@@ -17,6 +17,11 @@ SERVER_ROOT="${SERVER_ROOT:-/}"
 ADVERTISED_HOST=""
 ADVERTISED_PORT=""
 SERVER_PORT_FALLBACK="${SERVER_PORT_FALLBACK:-5436}"
+GLASSPATH_NO_SYSTEMD="${GLASSPATH_NO_SYSTEMD:-}"
+GLASSPATH_START_MODE="${GLASSPATH_START_MODE:-auto}"
+GLASSPATH_FOREGROUND="${GLASSPATH_FOREGROUND:-}"
+USE_SYSTEMD=1
+START_MODE="auto"
 # Default to latest release unless explicitly pinned.
 DEFAULT_GLASSPATH_VERSION="${DEFAULT_GLASSPATH_VERSION:-latest}"
 GLASSPATH_VERSION="${GLASSPATH_VERSION:-$DEFAULT_GLASSPATH_VERSION}"
@@ -25,6 +30,12 @@ GLASSPATH_TARBALL_URL="${GLASSPATH_TARBALL_URL:-}"
 # Basic logging helpers
 log() { printf "[glasspath] %s\n" "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
+is_true() {
+  case "$1" in
+    1|true|yes|y|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 # Colors for nicer output
 GREEN="\033[0;32m"
@@ -100,6 +111,14 @@ download_release() {
 }
 
 ensure_user() {
+  if [[ "$SERVICE_USER" == "root" ]]; then
+    return
+  fi
+  if (( USE_SYSTEMD == 0 )) && ! command -v useradd >/dev/null 2>&1; then
+    log "useradd unavailable without systemd; falling back to root"
+    SERVICE_USER="root"
+    return
+  fi
   if id "$SERVICE_USER" >/dev/null 2>&1; then
     return
   fi
@@ -151,6 +170,9 @@ EOF
 }
 
 start_without_systemd() {
+  local mode="$1"
+  local display_host="${2:-}"
+  local display_port="${3:-}"
   mkdir -p "$(dirname "$LOG_FILE")" /var/run
   local pidfile="/var/run/${SERVICE_NAME}.pid"
   if [[ -f "$pidfile" ]] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
@@ -158,14 +180,26 @@ start_without_systemd() {
     kill "$(cat "$pidfile")" 2>/dev/null || true
     sleep 1
   fi
-  log "Starting ${SERVICE_NAME} without systemd (logs: ${LOG_FILE})"
+
   local run_port="$SERVER_PORT"
-  nohup "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${run_port}" --root "${SERVER_ROOT}" >>"${LOG_FILE}" 2>&1 &
+  local cmd=( "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${run_port}" --root "${SERVER_ROOT}" )
+
+  if [[ "$mode" == "foreground" ]]; then
+    log "Starting ${SERVICE_NAME} without systemd in foreground (logs: ${LOG_FILE})"
+    if [[ -n "$display_host" && -n "$display_port" ]]; then
+      log "Visit: http://${display_host}:${display_port}"
+    fi
+    exec "${cmd[@]}"
+  fi
+
+  log "Starting ${SERVICE_NAME} without systemd (background, logs: ${LOG_FILE})"
+  nohup "${cmd[@]}" >>"${LOG_FILE}" 2>&1 &
   local pid=$!
   sleep 1
   if ! kill -0 "$pid" 2>/dev/null; then
     log "Port ${run_port} unavailable; retrying with fallback ${SERVER_PORT_FALLBACK}"
-    nohup "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${SERVER_PORT_FALLBACK}" --root "${SERVER_ROOT}" >>"${LOG_FILE}" 2>&1 &
+    cmd=( "$BIN_PATH" --database "${DATA_DIR}/filebrowser.db" --log "${LOG_FILE}" --address "${SERVER_ADDRESS}" --port "${SERVER_PORT_FALLBACK}" --root "${SERVER_ROOT}" )
+    nohup "${cmd[@]}" >>"${LOG_FILE}" 2>&1 &
     pid=$!
     run_port="$SERVER_PORT_FALLBACK"
     sleep 1
@@ -175,7 +209,7 @@ start_without_systemd() {
     SERVER_PORT="$run_port"
   fi
   echo $! >"$pidfile"
-  log "PID: $(cat "$pidfile")"
+  log "PID: $(cat "$pidfile") on port ${run_port}"
 }
 
 write_service_unit() {
@@ -309,6 +343,20 @@ choose_service_user() {
   log "Service will run as: ${SERVICE_USER}"
 }
 
+compute_display_target() {
+  local host="$SERVER_ADDRESS"
+  local port="$SERVER_PORT"
+  if [[ -n "$ADVERTISED_HOST" ]]; then
+    host="$ADVERTISED_HOST"
+  elif [[ "$SERVER_ADDRESS" == "0.0.0.0" || "$SERVER_ADDRESS" == "" ]]; then
+    host="$(detect_host_ip)"
+  fi
+  if [[ -n "$ADVERTISED_PORT" ]]; then
+    port="$ADVERTISED_PORT"
+  fi
+  printf "%s:%s" "$host" "$port"
+}
+
 do_install_flow() {
   local mode="$1"
   local url tarball
@@ -336,28 +384,23 @@ do_install_flow() {
 
   install_release "$tarball"
 
-  if has_systemctl; then
+  if (( USE_SYSTEMD )); then
     write_service_unit
     log "Starting ${SERVICE_NAME}..."
     systemctl start "$SERVICE_NAME"
     log "Done. Service status:"
     systemctl status "$SERVICE_NAME" --no-pager
   else
+    read -r display_host display_port <<<"$(compute_display_target)"
     write_run_script
-    start_without_systemd
-    log "Started ${SERVICE_NAME} without systemd. To run in foreground: ${SERVICE_NAME}-run"
+    start_without_systemd "$START_MODE" "$display_host" "$display_port"
+    if [[ "$START_MODE" == "background" ]]; then
+      log "Started ${SERVICE_NAME} without systemd (background). To run manually: ${SERVICE_NAME}-run"
+    fi
   fi
 
-  local display_host="$SERVER_ADDRESS"
-  local display_port="$SERVER_PORT"
-  if [[ -n "$ADVERTISED_HOST" ]]; then
-    display_host="$ADVERTISED_HOST"
-  elif [[ "$SERVER_ADDRESS" == "0.0.0.0" || "$SERVER_ADDRESS" == "" ]]; then
-    display_host="$(detect_host_ip)"
-  fi
-  if [[ -n "$ADVERTISED_PORT" ]]; then
-    display_port="$ADVERTISED_PORT"
-  fi
+  # Recompute display target in case port/host changed during startup.
+  read -r display_host display_port <<<"$(compute_display_target)"
   printf "%b[glasspath]%b Visit: http://%s:%s (open this port in your firewall)\n" "$GREEN" "$NC" "$display_host" "$display_port"
 }
 
@@ -373,6 +416,28 @@ main() {
   require_cmd curl
   require_cmd tar
   require_cmd uname
+
+  if is_true "$GLASSPATH_NO_SYSTEMD"; then
+    USE_SYSTEMD=0
+    log "GLASSPATH_NO_SYSTEMD set; skipping systemd setup."
+  elif has_systemctl; then
+    USE_SYSTEMD=1
+  else
+    USE_SYSTEMD=0
+  fi
+
+  START_MODE="$GLASSPATH_START_MODE"
+  [[ -z "$START_MODE" ]] && START_MODE="auto"
+  if is_true "$GLASSPATH_FOREGROUND"; then
+    START_MODE="foreground"
+  fi
+  if [[ "$START_MODE" == "auto" ]]; then
+    if (( USE_SYSTEMD )); then
+      START_MODE="background"
+    else
+      START_MODE="foreground"
+    fi
+  fi
 
   local mode="fresh install"
 
@@ -395,9 +460,14 @@ main() {
     log "No existing installation detected; proceeding with fresh install."
   fi
 
+  if (( USE_SYSTEMD == 0 )) && [[ "$SERVICE_USER" == "glasspath" ]]; then
+    log "No systemd detected; defaulting service user to root."
+    SERVICE_USER="root"
+  fi
+
   choose_service_user
 
-  if ! has_systemctl && [[ -t 0 ]]; then
+  if (( USE_SYSTEMD == 0 )) && [[ -t 0 ]]; then
     read -rp "Advertised host for URL (e.g., Docker host IP) []: " input_host
     ADVERTISED_HOST="$input_host"
     read -rp "Advertised port for URL [${SERVER_PORT}]: " input_port
