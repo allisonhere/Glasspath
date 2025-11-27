@@ -90,7 +90,10 @@ build_download_url() {
 download_release() {
   local url="$1"
   local out="$2"
-  curl -fsSL "$url" -o "$out" || die "Failed to download release"
+  log "Downloading release from ${url}"
+  if ! curl -fSL "$url" -o "$out"; then
+    die "Failed to download release"
+  fi
   if [[ ! -s "$out" ]]; then
     die "Downloaded release is empty: $out"
   fi
