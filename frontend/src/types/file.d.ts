@@ -5,6 +5,10 @@ interface ResourceBase {
   extension: string;
   modified: string; // ISO 8601 datetime
   mode: number;
+  uid?: number;
+  gid?: number;
+  owner?: string;
+  group?: string;
   isDir: boolean;
   isSymlink: boolean;
   type: ResourceType;

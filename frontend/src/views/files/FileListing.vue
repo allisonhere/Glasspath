@@ -44,6 +44,12 @@
             show="move"
           />
           <action
+            v-if="headerButtons.permissions"
+            icon="lock_open"
+            :label="t('buttons.permissions')"
+            show="permissions"
+          />
+          <action
             v-if="headerButtons.delete"
             id="delete-button"
             icon="delete"
@@ -113,6 +119,12 @@
         icon="forward"
         :label="t('buttons.moveFile')"
         show="move"
+      />
+      <action
+        v-if="headerButtons.permissions"
+        icon="lock_open"
+        :label="t('buttons.permissions')"
+        show="permissions"
       />
       <action
         v-if="headerButtons.delete"
@@ -286,6 +298,12 @@
             icon="forward"
             :label="t('buttons.moveFile')"
             show="move"
+          />
+          <action
+            v-if="headerButtons.permissions"
+            icon="lock_open"
+            :label="t('buttons.permissions')"
+            show="permissions"
           />
           <action
             v-if="headerButtons.delete"
@@ -482,6 +500,7 @@ const headerButtons = computed(() => {
     share: fileStore.selectedCount === 1 && authStore.user?.perm.share,
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
+    permissions: fileStore.selectedCount > 0 && authStore.user?.perm.modify,
   };
 });
 
@@ -574,6 +593,12 @@ const paletteCommands = computed(() => {
       description: t("prompts.renameMessage"),
       disabled: !(authStore.user?.perm.rename && fileStore.selectedCount === 1),
       shortcut: "F2",
+    },
+    {
+      id: "permissions",
+      label: t("buttons.permissions"),
+      description: t("prompts.permissions"),
+      disabled: !(authStore.user?.perm.modify && fileStore.selectedCount > 0),
     },
     {
       id: "delete",
@@ -1121,6 +1146,9 @@ const runCommand = (id: string) => {
       break;
     case "rename":
       layoutStore.showHover("rename");
+      break;
+    case "permissions":
+      layoutStore.showHover("permissions");
       break;
     case "delete":
       layoutStore.showHover("delete");

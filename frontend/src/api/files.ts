@@ -228,3 +228,22 @@ export async function usage(url: string, signal: AbortSignal) {
     throw e;
   }
 }
+
+export interface PermissionsPayload {
+  mode?: string;
+  owner?: string;
+  group?: string;
+  recursive?: boolean;
+}
+
+export async function changePermissions(url: string, payload: PermissionsPayload) {
+  url = removePrefix(url);
+
+  return fetchURL(`/api/permissions${url}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}

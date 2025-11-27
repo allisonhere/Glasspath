@@ -42,6 +42,10 @@ type FileInfo struct {
 	Extension  string            `json:"extension"`
 	ModTime    time.Time         `json:"modified"`
 	Mode       os.FileMode       `json:"mode"`
+	UID        int               `json:"uid"`
+	GID        int               `json:"gid"`
+	Owner      string            `json:"owner,omitempty"`
+	Group      string            `json:"group,omitempty"`
 	IsDir      bool              `json:"isDir"`
 	IsSymlink  bool              `json:"isSymlink"`
 	Type       string            `json:"type"`
@@ -125,6 +129,7 @@ func stat(opts *FileOptions) (*FileInfo, error) {
 			Extension: filepath.Ext(info.Name()),
 			Token:     opts.Token,
 		}
+		setOwnership(info, file)
 	}
 
 	// regular file
@@ -160,6 +165,7 @@ func stat(opts *FileOptions) (*FileInfo, error) {
 		Extension: filepath.Ext(info.Name()),
 		Token:     opts.Token,
 	}
+	setOwnership(info, file)
 
 	return file, nil
 }
@@ -216,6 +222,14 @@ func (i *FileInfo) RealPath() string {
 	}
 
 	return i.Path
+}
+
+func setOwnership(info os.FileInfo, file *FileInfo) {
+	uid, gid, owner, group := ownershipFromInfo(info)
+	file.UID = uid
+	file.GID = gid
+	file.Owner = owner
+	file.Group = group
 }
 
 func (i *FileInfo) detectType(modify, saveContent, readHeader bool) error {
